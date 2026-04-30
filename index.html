@@ -1,0 +1,3142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Finanzas">
+<meta name="theme-color" content="#0f172a">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230f172a'/%3E%3Ctext x='90' y='128' font-size='110' text-anchor='middle' font-family='Apple Color Emoji,Segoe UI Emoji,sans-serif'%3E💰%3C/text%3E%3C/svg%3E">
+<title>Mis Finanzas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #0f172a;
+    --bg-card: #1e293b;
+    --bg-soft: #334155;
+    --border: #334155;
+    --text: #f1f5f9;
+    --text-soft: #94a3b8;
+    --accent: #38bdf8;
+    --green: #22c55e;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --violet: #a78bfa;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    padding-top: env(safe-area-inset-top);
+    font-size: 15px;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 16px; }
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 16px;
+    padding-top: calc(16px + env(safe-area-inset-top));
+    border-bottom: 1px solid var(--border);
+  }
+  .header-row { display: flex; justify-content: space-between; align-items: center; max-width: 900px; margin: 0 auto; gap: 12px; }
+  h1 { font-size: 20px; font-weight: 700; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .sync-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green); transition: background .2s;
+    cursor: pointer;
+  }
+  .sync-dot.syncing { background: var(--amber); animation: pulse 1s infinite; }
+  .sync-dot.error { background: var(--red); }
+  .sync-dot.offline { background: var(--text-soft); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .dolar-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-card); padding: 8px 12px; border-radius: 999px;
+    border: 1px solid var(--border); cursor: pointer;
+    font-size: 13px;
+  }
+  .dolar-pill input {
+    background: transparent; border: none; color: var(--accent);
+    font-weight: 600; width: 70px; text-align: right; font-size: 13px;
+    font-family: inherit;
+  }
+  .dolar-pill input:focus { outline: 1px solid var(--accent); border-radius: 4px; }
+
+  /* Tabs */
+  nav.tabs {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--bg-card); border-top: 1px solid var(--border);
+    display: flex; justify-content: space-around;
+    padding: 8px 0 max(8px, env(safe-area-inset-bottom)); z-index: 100;
+  }
+  .tab-btn {
+    flex: 1; background: none; border: none; color: var(--text-soft);
+    padding: 8px 4px; cursor: pointer; font-size: 11px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-family: inherit;
+  }
+  .tab-btn.active { color: var(--accent); }
+  .tab-icon { font-size: 22px; }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card); border-radius: 16px; padding: 18px;
+    margin-bottom: 14px; border: 1px solid var(--border);
+  }
+  .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 14px; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.5px; }
+  .card h3 { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+
+  .net-worth {
+    background: linear-gradient(135deg, #1e3a8a 0%, #312e81 100%);
+    border: none;
+  }
+  .net-worth .label { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 4px; }
+  .net-worth .total { font-size: 32px; font-weight: 700; }
+  .net-worth .sub { font-size: 14px; color: rgba(255,255,255,0.7); margin-top: 6px; }
+  .net-worth .breakdown {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
+    margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.15);
+  }
+  .net-worth .breakdown div { font-size: 12px; color: rgba(255,255,255,0.7); }
+  .net-worth .breakdown .v { font-size: 15px; color: white; font-weight: 600; margin-top: 2px; }
+
+  .view { display: none; animation: fade .25s ease; }
+  .view.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  .btn {
+    background: var(--accent); color: #0f172a; border: none;
+    padding: 12px 18px; border-radius: 10px; font-weight: 600;
+    cursor: pointer; font-size: 14px; font-family: inherit;
+    transition: opacity .15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-danger { background: var(--red); color: white; }
+  .btn-block { width: 100%; }
+
+  .form-grid { display: grid; gap: 10px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  label { display: block; font-size: 12px; color: var(--text-soft); margin-bottom: 4px; }
+  input, select, textarea {
+    width: 100%; background: var(--bg-soft); color: var(--text);
+    border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px;
+    font-size: 16px; font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+
+  .computed-row {
+    background: var(--bg-soft); padding: 10px 12px; border-radius: 8px;
+    display: flex; justify-content: space-between; gap: 10px;
+    font-size: 13px;
+  }
+  .computed-row > div { flex: 1; }
+  .computed-row .lbl { color: var(--text-soft); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+  .computed-row .val { font-weight: 600; margin-top: 2px; font-size: 14px; }
+
+  .item-list { display: flex; flex-direction: column; gap: 8px; }
+  .item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg-soft); padding: 12px 14px; border-radius: 10px;
+    gap: 10px; cursor: pointer;
+  }
+  .item-info { flex: 1; min-width: 0; }
+  .item-title { font-weight: 600; font-size: 14px; }
+  .item-sub { font-size: 12px; color: var(--text-soft); margin-top: 2px; }
+  .item-amount { font-weight: 700; font-size: 15px; text-align: right; flex-shrink: 0; }
+  .item-amount.green { color: var(--green); }
+  .item-amount.red { color: var(--red); }
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip {
+    background: var(--bg-soft); border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    font-size: 12px; color: var(--text-soft);
+  }
+  .chip.active { background: var(--accent); color: #0f172a; border-color: var(--accent); font-weight: 600; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .stat { background: var(--bg-soft); padding: 12px; border-radius: 10px; }
+  .stat-label { font-size: 11px; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 18px; font-weight: 700; margin-top: 4px; }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+
+  .chart-wrap { position: relative; height: 220px; margin-top: 8px; }
+
+  .modal-bg {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); z-index: 200;
+    align-items: flex-end; justify-content: center;
+  }
+  .modal-bg.active { display: flex; }
+  .modal {
+    background: var(--bg-card); width: 100%; max-width: 500px;
+    border-radius: 20px 20px 0 0; padding: 20px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+    max-height: 90vh; overflow-y: auto;
+    animation: slideup .25s ease;
+  }
+  @keyframes slideup { from { transform: translateY(100%); } to { transform: none; } }
+  .modal h3 { margin-bottom: 14px; font-size: 18px; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .modal-actions .btn { flex: 1; }
+
+  .fab {
+    position: fixed; bottom: calc(80px + env(safe-area-inset-bottom)); right: 20px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--accent); color: #0f172a;
+    border: none; font-size: 28px; cursor: pointer;
+    box-shadow: 0 8px 24px rgba(56, 189, 248, 0.4);
+    z-index: 50; display: flex; align-items: center; justify-content: center;
+  }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--text-soft); }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+
+  .toast {
+    position: fixed; bottom: calc(100px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+    background: var(--bg-card); color: var(--text);
+    padding: 12px 18px; border-radius: 10px; border: 1px solid var(--border);
+    font-size: 13px; z-index: 300; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+    max-width: 90%;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+  .toast.error { border-color: var(--red); }
+  .toast.success { border-color: var(--green); }
+
+  .ccy-toggle {
+    display: inline-flex; background: var(--bg-soft); border-radius: 8px; padding: 2px; margin-left: 8px;
+  }
+  .ccy-toggle button {
+    background: transparent; border: none; color: var(--text-soft);
+    padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px;
+    font-family: inherit; font-weight: 600;
+  }
+  .ccy-toggle button.active { background: var(--accent); color: #0f172a; }
+
+  /* Setup screen */
+  .setup-screen {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 80vh; padding: 20px; text-align: center;
+  }
+  .setup-screen h2 { font-size: 22px; margin-bottom: 12px; color: var(--text); text-transform: none; letter-spacing: normal; }
+  .setup-screen p { color: var(--text-soft); margin-bottom: 20px; max-width: 400px; line-height: 1.5; }
+  .setup-screen input { max-width: 400px; margin-bottom: 12px; }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    z-index: 500; gap: 16px;
+  }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (min-width: 700px) {
+    .stats { grid-template-columns: repeat(4, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div id="loadingText" style="color: var(--text-soft); font-size: 14px;">Cargando datos...</div>
+</div>
+
+<!-- PIN screen -->
+<div class="setup-screen" id="pinScreen" style="display:none">
+  <h2>🔒 Ingresá tu PIN</h2>
+  <p>Para desbloquear la app:</p>
+  <input type="password" inputmode="numeric" pattern="[0-9]*" id="pinInput" placeholder="••••" maxlength="8" style="text-align: center; font-size: 24px; letter-spacing: 8px; max-width: 200px;">
+  <button class="btn" onclick="checkPin()">Desbloquear</button>
+  <p id="pinError" style="color: var(--red); font-size: 13px; margin-top: 12px; min-height: 18px;"></p>
+  <p style="margin-top: 20px; font-size: 12px;">¿Olvidaste tu PIN? Tocá <a href="#" onclick="resetPin(); return false;" style="color: var(--accent);">acá</a> para resetear (mantenés tus datos).</p>
+</div>
+
+<!-- Setup screen (first time) -->
+<div class="setup-screen" id="setupScreen" style="display:none">
+  <h2>👋 Configurá tu app</h2>
+  <p>Para sincronizar tus datos entre dispositivos, pegá la URL de tu Google Apps Script (la que termina en <code>/exec</code>).</p>
+  <input type="text" id="setupUrl" placeholder="https://script.google.com/macros/s/.../exec">
+  <p style="margin-top: 12px;">Token de seguridad (opcional pero recomendado):</p>
+  <input type="text" id="setupToken" placeholder="Tu token secreto (si configuraste uno)">
+  <button class="btn" onclick="saveBackendUrl()">Conectar</button>
+  <p style="margin-top: 20px; font-size: 12px;">Esta URL queda guardada solo en este dispositivo. La podés cambiar después tocando el puntito de sincronización.</p>
+</div>
+
+<!-- Main app -->
+<div id="mainApp" style="display:none">
+
+<header>
+  <div class="header-row">
+    <h1>💰 Mis Finanzas</h1>
+    <div class="header-right">
+      <span class="sync-dot" id="syncDot" title="Estado de sincronización" onclick="showSyncMenu()"></span>
+      <div class="dolar-pill" id="dolarPill" title="Cotizaciones del dólar" onclick="openExchangeModal()">
+        <span>USD</span>
+        <span id="dolarPillValue" style="color: var(--accent); font-weight: 600;">$1.440</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="view active" id="view-dashboard">
+    <div class="card net-worth">
+      <div class="label">Patrimonio total</div>
+      <div class="total" id="netWorthTotal">$0</div>
+      <div class="sub" id="netWorthUsd">USD 0</div>
+      <div class="breakdown">
+        <div><div>Cuentas</div><div class="v" id="bdAccounts">$0</div></div>
+        <div><div>Inversiones</div><div class="v" id="bdInvestments">$0</div></div>
+        <div><div>Mes (gastos)</div><div class="v" id="bdMonthExpenses">$0</div></div>
+      </div>
+    </div>
+
+    <div class="card" id="upcomingCard" style="display:none">
+      <h2>Próximos vencimientos</h2>
+      <div class="item-list" id="upcomingList"></div>
+    </div>
+
+    <div class="card">
+      <h2>Resumen del mes</h2>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Ingresos</div><div class="stat-value green" id="statIncome">$0</div></div>
+        <div class="stat"><div class="stat-label">Gastos</div><div class="stat-value red" id="statExpenses">$0</div></div>
+        <div class="stat"><div class="stat-label">Balance</div><div class="stat-value" id="statBalance">$0</div></div>
+        <div class="stat"><div class="stat-label">Movimientos</div><div class="stat-value" id="statTxCount">0</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Gastos por categoría (este mes)</h2>
+      <div class="chart-wrap"><canvas id="chartCategories"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2>Evolución del patrimonio
+        <span class="ccy-toggle" id="histCcyToggle" style="margin-left: 8px;">
+          <button class="active" data-ccy="ARS">ARS</button>
+          <button data-ccy="USD">USD</button>
+        </span>
+      </h2>
+      <div class="chart-wrap"><canvas id="chartHistory"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2>Composición del patrimonio</h2>
+      <div class="chart-wrap"><canvas id="chartNetWorth"></canvas></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-tx">
+    <div class="card">
+      <div style="display:flex; align-items:center; justify-content: space-between; margin-bottom: 14px; gap: 8px;">
+        <button class="btn btn-outline" style="padding: 8px 14px; font-size: 16px; min-width: 44px;" onclick="changeTxMonth(-1)">◀</button>
+        <button id="txMonthLabel" class="btn btn-outline" style="flex: 1; padding: 8px 12px; font-size: 14px; font-weight: 600;" onclick="openMonthPicker()">—</button>
+        <button class="btn btn-outline" style="padding: 8px 14px; font-size: 16px; min-width: 44px;" onclick="changeTxMonth(1)">▶</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 14px;">
+        <div style="background: var(--bg-soft); padding: 8px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 10px; color: var(--text-soft); text-transform: uppercase;">Ingresos</div>
+          <div id="txMonthIncome" style="font-size: 13px; font-weight: 700; color: var(--green); margin-top: 2px;">$0</div>
+        </div>
+        <div style="background: var(--bg-soft); padding: 8px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 10px; color: var(--text-soft); text-transform: uppercase;">Gastos</div>
+          <div id="txMonthExpenses" style="font-size: 13px; font-weight: 700; color: var(--red); margin-top: 2px;">$0</div>
+        </div>
+        <div style="background: var(--bg-soft); padding: 8px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 10px; color: var(--text-soft); text-transform: uppercase;">Balance</div>
+          <div id="txMonthBalance" style="font-size: 13px; font-weight: 700; margin-top: 2px;">$0</div>
+        </div>
+      </div>
+
+      <div class="chips" id="txFilters">
+        <button class="chip active" data-filter="all">Todos</button>
+        <button class="chip" data-filter="expense">Gastos</button>
+        <button class="chip" data-filter="income">Ingresos</button>
+        <button class="chip" data-filter="transfer">↔ Transfer.</button>
+      </div>
+      <div id="txCount" style="font-size: 11px; color: var(--text-soft); margin-bottom: 8px;">—</div>
+      <div class="item-list" id="txList"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-btc">
+
+    <div class="card" style="background: linear-gradient(135deg, #f7931a22 0%, #f7931a11 100%); border-color: #f7931a44;">
+      <div style="display:flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+        <div>
+          <div style="font-size: 13px; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.5px;">₿ Bitcoin</div>
+          <div id="btcPriceUsd" style="font-size: 28px; font-weight: 700; margin-top: 4px;">—</div>
+          <div id="btcPriceArs" style="font-size: 14px; color: var(--text-soft); margin-top: 2px;">—</div>
+        </div>
+        <button class="btn btn-outline" style="padding: 6px 12px; font-size: 12px;" onclick="refreshBtcData()">🔄</button>
+      </div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px;">
+        <div style="background: var(--bg-soft); padding: 8px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 10px; color: var(--text-soft); text-transform: uppercase;">24h</div>
+          <div id="btcChange24h" style="font-size: 14px; font-weight: 600; margin-top: 2px;">—</div>
+        </div>
+        <div style="background: var(--bg-soft); padding: 8px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 10px; color: var(--text-soft); text-transform: uppercase;">7d</div>
+          <div id="btcChange7d" style="font-size: 14px; font-weight: 600; margin-top: 2px;">—</div>
+        </div>
+        <div style="background: var(--bg-soft); padding: 8px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 10px; color: var(--text-soft); text-transform: uppercase;">30d</div>
+          <div id="btcChange30d" style="font-size: 14px; font-weight: 600; margin-top: 2px;">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="signalCard">
+      <h2>🎯 Señal compuesta</h2>
+      <div style="text-align: center; padding: 8px 0;">
+        <div id="signalLabel" style="font-size: 22px; font-weight: 700; margin-bottom: 8px;">—</div>
+        <div style="background: var(--bg-soft); height: 16px; border-radius: 999px; overflow: hidden; position: relative; margin: 12px 0;">
+          <div id="signalBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #22c55e 0%, #22c55e 20%, #f1f5f9 20%, #f1f5f9 60%, #f59e0b 60%, #f59e0b 80%, #ef4444 80%, #ef4444 100%); transition: width .8s ease;"></div>
+          <div id="signalMarker" style="position: absolute; top: -4px; left: 0%; width: 4px; height: 24px; background: white; border-radius: 2px; box-shadow: 0 0 8px rgba(255,255,255,0.6); transition: left .8s ease;"></div>
+        </div>
+        <div id="signalScore" style="font-size: 32px; font-weight: 700; margin-top: 8px;">—</div>
+        <div style="font-size: 11px; color: var(--text-soft); margin-top: 4px;">score / 100</div>
+      </div>
+
+      <div style="margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px;">
+        <div style="font-size: 12px; color: var(--text-soft); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Componentes</div>
+        <div id="signalComponents" style="display: grid; gap: 6px;"></div>
+      </div>
+
+      <div style="margin-top: 16px; padding: 10px 12px; background: var(--bg-soft); border-radius: 8px; font-size: 12px; line-height: 1.7;">
+        <div style="font-weight: 600; margin-bottom: 6px; color: var(--text);">📖 Leyenda</div>
+        <div>🟢 <strong>0–20</strong>: Comprá fuerte</div>
+        <div>🟢 <strong>21–40</strong>: Comprá DCA</div>
+        <div>⚪ <strong>41–60</strong>: Esperá</div>
+        <div>🟠 <strong>61–80</strong>: Vendé parcial</div>
+        <div>🔴 <strong>81–100</strong>: Vendé fuerte</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📊 Indicadores técnicos</h2>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">F&G Index</div><div class="stat-value" id="btcFgi">—</div></div>
+        <div class="stat"><div class="stat-label">RSI 1d</div><div class="stat-value" id="btcRsiD">—</div></div>
+        <div class="stat"><div class="stat-label">RSI 1w</div><div class="stat-value" id="btcRsiW">—</div></div>
+        <div class="stat"><div class="stat-label">vs MA200</div><div class="stat-value" id="btcVsMa">—</div></div>
+      </div>
+      <div id="btcDataNote" style="font-size: 11px; color: var(--text-soft); margin-top: 8px; text-align: center;">—</div>
+    </div>
+
+    <div class="card" id="btcPositionCard">
+      <h2>💼 Tu posición BTC</h2>
+      <div id="btcPositionContent">
+        <div class="empty"><div class="empty-icon">₿</div>Sin posición BTC. <br>Cargá una inversión tipo "Cripto" con nombre "BTC" en la pestaña Inversiones.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🎯 Plan DCA (compra escalonada)
+        <button class="btn btn-outline" style="padding:4px 10px; font-size:11px; float:right; margin-top:-2px;" onclick="editDcaPlan()">⚙️ Ajustar</button>
+      </h2>
+      <div id="dcaPlanList"></div>
+      <div style="font-size: 11px; color: var(--text-soft); margin-top: 8px; line-height: 1.5;">
+        💡 Definí tramos de compra según el RSI. La app te avisa qué tramo conviene ejecutar según las condiciones actuales.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🎯 Plan Take-Profit (venta escalonada)
+        <button class="btn btn-outline" style="padding:4px 10px; font-size:11px; float:right; margin-top:-2px;" onclick="editTpPlan()">⚙️ Ajustar</button>
+      </h2>
+      <div id="tpPlanList"></div>
+      <div style="font-size: 11px; color: var(--text-soft); margin-top: 8px; line-height: 1.5;">
+        💡 Definí niveles de ganancia para vender parcialmente. Se calcula sobre tu precio promedio de compra.
+      </div>
+    </div>
+
+    <div class="card" style="background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.3);">
+      <div style="font-size: 12px; line-height: 1.6; color: var(--text-soft);">
+        ⚠️ <strong style="color: var(--amber);">Aviso</strong>: estas señales son orientativas, no consejo financiero. El BTC es muy volátil. Los indicadores fallan seguido. Nunca pongas plata que no podés perder. Las decisiones son tuyas.
+      </div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-inv">
+    <div class="card">
+      <h2>
+        Inversiones
+        <span class="ccy-toggle" id="invCcyToggle">
+          <button class="active" data-ccy="ARS">ARS</button>
+          <button data-ccy="USD">USD</button>
+        </span>
+      </h2>
+      <div style="display:flex; gap: 8px; margin-bottom: 14px; align-items: center;">
+        <button class="btn btn-outline" id="btnUpdateAllPrices" style="flex: 1; padding: 10px; font-size: 13px;" onclick="updateAllPrices()">
+          ⚡ Actualizar precios automáticos
+        </button>
+      </div>
+      <div id="pricesUpdateInfo" style="font-size: 11px; color: var(--text-soft); text-align: center; margin-bottom: 10px; min-height: 14px;"></div>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Valor actual</div><div class="stat-value" id="invTotal">$0</div></div>
+        <div class="stat"><div class="stat-label">Invertido</div><div class="stat-value" id="invInvestedTotal">$0</div></div>
+        <div class="stat"><div class="stat-label">Ganancia</div><div class="stat-value" id="invPL">$0</div></div>
+        <div class="stat"><div class="stat-label">Rendimiento</div><div class="stat-value" id="invPLPct">0%</div></div>
+      </div>
+      <div class="item-list" id="invList"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-rec">
+    <div class="card">
+      <h2>Gastos recurrentes y cuotas</h2>
+      <div id="pendingApprovalSection" style="display:none; margin-bottom: 14px;">
+        <h3 style="color: var(--amber);">⏰ Pendientes de aprobación</h3>
+        <div class="item-list" id="pendingList"></div>
+      </div>
+      <div class="item-list" id="recList"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-acc">
+    <div class="card">
+      <h2>Cuentas y efectivo</h2>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Total ARS</div><div class="stat-value" id="accTotalArs">$0</div></div>
+        <div class="stat"><div class="stat-label">Total USD</div><div class="stat-value" id="accTotalUsd">USD 0</div></div>
+      </div>
+      <div class="item-list" id="accList"></div>
+    </div>
+  </div>
+
+</div>
+
+<button class="fab" id="fabBtn" title="Agregar">+</button>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-view="dashboard"><span class="tab-icon">📊</span>Inicio</button>
+  <button class="tab-btn" data-view="tx"><span class="tab-icon">💸</span>Movim.</button>
+  <button class="tab-btn" data-view="rec"><span class="tab-icon">🔁</span>Recurr.</button>
+  <button class="tab-btn" data-view="btc"><span class="tab-icon">₿</span>BTC</button>
+  <button class="tab-btn" data-view="inv"><span class="tab-icon">📈</span>Invers.</button>
+  <button class="tab-btn" data-view="acc"><span class="tab-icon">🏦</span>Cuentas</button>
+</nav>
+
+</div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 id="modalTitle">Nuevo</h3>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// =========== CONSTANTS ===========
+const CATEGORIES_EXPENSE = ['Comida', 'Transporte', 'Vivienda', 'Servicios', 'Salud', 'Educación', 'Ocio', 'Ropa', 'Hijo/a', 'Otros'];
+const CATEGORIES_INCOME = ['Sueldo', 'Freelance', 'Renta', 'Dividendos', 'Venta', 'Otros'];
+const INVESTMENT_TYPES = ['CEDEAR', 'Acciones', 'ON', 'FCI', 'Plazo fijo', 'Cripto', 'Bonos', 'Otros'];
+const ACCOUNT_TYPES = ['Caja de ahorro ARS', 'Caja de ahorro USD', 'Efectivo ARS', 'Efectivo USD', 'Billetera virtual', 'Broker', 'Otra'];
+const LOCAL_PREFIX = 'finanzas_v3_';
+const URL_KEY = 'finanzas_v3_backend_url';
+const TOKEN_KEY = 'finanzas_v3_backend_token';
+const PIN_KEY = 'finanzas_v3_pin_hash';
+
+// =========== STATE ===========
+let state = {
+  transactions: [],
+  investments: [],
+  accounts: [],
+  meta: {
+    dolarRate: 1440,
+    recurring: [],
+    lastRecurringCheck: null,
+    dolarRates: null,
+    dolarRatesUpdatedAt: null,
+    exchangeSpreads: {
+      cocos:   { buyPct: -0.5, sellPct: 0.0,  basis: 'mep' },
+      mp:      { buyPct: -1.5, sellPct: 1.0,  basis: 'mep' },
+      brubank: { buyPct: -2.0, sellPct: 1.5,  basis: 'mep' }
+    },
+    history: [],
+    lastSnapshotDate: null,
+    btc: {
+      lastData: null,
+      lastFetchedAt: null,
+      dcaPlan: [
+        { rsiBelow: 40, pctOfCapital: 33, label: 'Tramo 1' },
+        { rsiBelow: 30, pctOfCapital: 33, label: 'Tramo 2' },
+        { rsiBelow: 20, pctOfCapital: 34, label: 'Tramo 3' }
+      ],
+      tpPlan: [
+        { gainPct: 20, sellPct: 25, label: 'TP1' },
+        { gainPct: 40, sellPct: 25, label: 'TP2' },
+        { gainPct: 80, sellPct: 25, label: 'TP3' },
+        { gainPct: 150, sellPct: 25, label: 'TP4 (moon)' }
+      ],
+      executedDcaTramos: [],
+      executedTpTramos: []
+    }
+  }
+};
+
+let backendUrl = null;
+let backendToken = null;
+let lastPricesData = null;
+let lastPricesFetchedAt = null;
+let currentTxFilter = 'all';
+let currentTxMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+let invDisplayCcy = 'ARS';
+let histDisplayCcy = 'ARS';
+let chartCategories = null;
+let chartNetWorth = null;
+let chartHistory = null;
+let pendingSync = new Set();
+let syncTimer = null;
+let isOnline = navigator.onLine;
+
+const $ = (id) => document.getElementById(id);
+
+// =========== FORMATTING ===========
+const fmt = (n, ccy = 'ARS') => {
+  const num = Number(n) || 0;
+  if (ccy === 'USD') return 'USD ' + num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  return '$' + num.toLocaleString('es-AR', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+};
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+function toArs(amount, ccy) { return ccy === 'USD' ? amount * state.meta.dolarRate : amount; }
+function toUsd(amount, ccy) { return ccy === 'ARS' ? amount / state.meta.dolarRate : amount; }
+
+// =========== TOAST & SYNC INDICATOR ===========
+function showToast(msg, type = '') {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+function setSyncStatus(status) {
+  const dot = $('syncDot');
+  dot.className = 'sync-dot' + (status ? ' ' + status : '');
+  const titles = {
+    '': 'Sincronizado ✓',
+    'syncing': 'Sincronizando...',
+    'error': 'Error de sincronización (toca para opciones)',
+    'offline': 'Sin conexión (datos guardados local)'
+  };
+  dot.title = titles[status] || titles[''];
+}
+
+window.showSyncMenu = () => {
+  const opts = [
+    '1. Forzar sincronización',
+    '2. Cambiar URL del backend',
+    '3. Cambiar token de seguridad',
+    '4. Recargar datos desde el Sheet',
+    '5. Configurar PIN de la app',
+    '6. Cancelar'
+  ].join('\n');
+  const choice = prompt('Opciones:\n\n' + opts + '\n\nIngresá el número:');
+  if (choice === '1') { forceSyncAll(); }
+  else if (choice === '2') {
+    const newUrl = prompt('Nueva URL del backend (terminada en /exec):', backendUrl || '');
+    if (newUrl && newUrl.trim()) {
+      localStorage.setItem(URL_KEY, newUrl.trim());
+      location.reload();
+    }
+  }
+  else if (choice === '3') {
+    const newToken = prompt('Nuevo token de seguridad (dejá vacío para quitar):', backendToken || '');
+    if (newToken !== null) {
+      if (newToken.trim()) localStorage.setItem(TOKEN_KEY, newToken.trim());
+      else localStorage.removeItem(TOKEN_KEY);
+      location.reload();
+    }
+  }
+  else if (choice === '4') {
+    if (confirm('¿Recargar desde el Sheet? Los cambios locales sin sincronizar se pueden perder.')) {
+      pendingSync.clear();
+      loadFromCloud(true).then(() => { renderAll(); showToast('Datos recargados ✓', 'success'); });
+    }
+  }
+  else if (choice === '5') {
+    setNewPin();
+  }
+};
+
+// =========== PERSISTENCE: LOCAL ===========
+function saveLocal(key) {
+  try {
+    localStorage.setItem(LOCAL_PREFIX + key, JSON.stringify(state[key]));
+    return true;
+  } catch (e) {
+    console.error('localStorage error:', e);
+    return false;
+  }
+}
+function loadLocal(key) {
+  try {
+    const v = localStorage.getItem(LOCAL_PREFIX + key);
+    if (v) return JSON.parse(v);
+  } catch (e) { console.error('localStorage read error:', e); }
+  return null;
+}
+
+// =========== PERSISTENCE: CLOUD ===========
+async function writeToCloud(key) {
+  if (!backendUrl) return false;
+  try {
+    const body = new URLSearchParams();
+    body.append('action', 'write');
+    body.append('key', key);
+    body.append('payload', JSON.stringify(state[key]));
+    if (backendToken) body.append('token', backendToken);
+    const resp = await fetch(backendUrl, {
+      method: 'POST',
+      body: body
+    });
+    const json = await resp.json();
+    return json.ok === true;
+  } catch (e) {
+    console.warn('Cloud write failed:', e);
+    return false;
+  }
+}
+
+async function readFromCloud() {
+  if (!backendUrl) return null;
+  try {
+    const tokenParam = backendToken ? '&token=' + encodeURIComponent(backendToken) : '';
+    const resp = await fetch(backendUrl + '?action=read' + tokenParam);
+    const json = await resp.json();
+    if (json.ok) return json.data;
+    if (json.error && json.error.includes('token')) {
+      showToast('⚠️ Token incorrecto', 'error');
+    }
+  } catch (e) {
+    console.warn('Cloud read failed:', e);
+  }
+  return null;
+}
+
+async function fetchAllPrices() {
+  if (!backendUrl) return null;
+  try {
+    const tokenParam = backendToken ? '&token=' + encodeURIComponent(backendToken) : '';
+    const resp = await fetch(backendUrl + '?action=prices' + tokenParam);
+    const json = await resp.json();
+    if (json.ok && json.data) {
+      lastPricesData = json.data;
+      lastPricesFetchedAt = json.fetchedAt || new Date().toISOString();
+      return json.data;
+    }
+    return null;
+  } catch (e) {
+    console.warn('Prices fetch failed:', e);
+    return null;
+  }
+}
+
+function getPriceForTicker(ticker) {
+  if (!lastPricesData || !ticker) return null;
+  const upper = ticker.toUpperCase().trim();
+  return lastPricesData[upper] || null;
+}
+
+// Determine if an investment is auto-updateable (has known ticker in market data)
+function canAutoUpdate(inv) {
+  if (!inv || !inv.name) return false;
+  if (!lastPricesData) return false;
+  // FCI and Plazo fijo are always manual
+  const manualTypes = ['FCI', 'Plazo fijo'];
+  if (manualTypes.includes(inv.type)) return false;
+  return !!getPriceForTicker(inv.name);
+}
+
+async function syncToCloudWithRetry(key, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    if (await writeToCloud(key)) return true;
+    if (i < retries - 1) await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+  }
+  return false;
+}
+
+function scheduleCloudSync() {
+  if (!backendUrl) return;
+  if (syncTimer) clearTimeout(syncTimer);
+  setSyncStatus('syncing');
+  syncTimer = setTimeout(async () => {
+    if (!isOnline) { setSyncStatus('offline'); return; }
+    const keys = Array.from(pendingSync);
+    pendingSync.clear();
+    let allOk = true;
+    for (const key of keys) {
+      const ok = await syncToCloudWithRetry(key);
+      if (!ok) { allOk = false; pendingSync.add(key); }
+      await new Promise(r => setTimeout(r, 200));
+    }
+    setSyncStatus(allOk ? '' : 'error');
+    if (!allOk) setTimeout(scheduleCloudSync, 30000);
+  }, 1500);
+}
+
+async function forceSyncAll() {
+  ['transactions', 'investments', 'accounts', 'meta'].forEach(k => pendingSync.add(k));
+  scheduleCloudSync();
+  showToast('Forzando sincronización...', 'success');
+}
+
+async function persist(key) {
+  saveLocal(key);
+  pendingSync.add(key);
+  scheduleCloudSync();
+}
+
+async function loadFromCloud(forceOverwrite = false) {
+  const cloudData = await readFromCloud();
+  if (!cloudData) return false;
+  ['transactions', 'investments', 'accounts', 'meta'].forEach(k => {
+    if (cloudData[k] !== undefined) {
+      const cloudHasContent = Array.isArray(cloudData[k]) ? cloudData[k].length > 0 : Object.keys(cloudData[k] || {}).length > 0;
+      const localHasContent = Array.isArray(state[k]) ? state[k].length > 0 : Object.keys(state[k] || {}).length > 0;
+      if (forceOverwrite || cloudHasContent || !localHasContent) {
+        state[k] = cloudData[k];
+        saveLocal(k);
+      }
+    }
+  });
+  if (state.meta && state.meta.dolarRate) {
+    updateDolarPill();
+  }
+  return true;
+}
+
+async function loadState() {
+  ['transactions', 'investments', 'accounts', 'meta'].forEach(k => {
+    const local = loadLocal(k);
+    if (local !== null) state[k] = local;
+  });
+  if (state.meta && state.meta.dolarRate) updateDolarPill();
+
+  if (backendUrl && isOnline) {
+    setSyncStatus('syncing');
+    const ok = await loadFromCloud();
+    setSyncStatus(ok ? '' : 'error');
+  } else if (!isOnline) {
+    setSyncStatus('offline');
+  }
+}
+
+// =========== ONLINE/OFFLINE ===========
+window.addEventListener('online', () => { isOnline = true; setSyncStatus(''); if (pendingSync.size > 0) scheduleCloudSync(); });
+window.addEventListener('offline', () => { isOnline = false; setSyncStatus('offline'); });
+
+// =========== SETUP / FIRST RUN ===========
+window.saveBackendUrl = () => {
+  const url = $('setupUrl').value.trim();
+  const token = $('setupToken').value.trim();
+  if (!url || !url.includes('/exec')) {
+    alert('La URL debe terminar en /exec');
+    return;
+  }
+  localStorage.setItem(URL_KEY, url);
+  if (token) localStorage.setItem(TOKEN_KEY, token);
+  else localStorage.removeItem(TOKEN_KEY);
+  location.reload();
+};
+
+// =========== TAB NAVIGATION ===========
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    btn.classList.add('active');
+    $('view-' + btn.dataset.view).classList.add('active');
+    if (btn.dataset.view === 'dashboard') renderDashboard();
+  });
+});
+
+// =========== DOLAR RATE ===========
+// =========== DOLAR RATES (auto-fetched + manual override) ===========
+function updateDolarPill() {
+  const v = state.meta.dolarRate || 1440;
+  $('dolarPillValue').textContent = '$' + Math.round(v).toLocaleString('es-AR');
+}
+
+async function fetchDolarRates() {
+  try {
+    const resp = await fetch('https://dolarapi.com/v1/dolares');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const arr = await resp.json();
+    const map = {};
+    arr.forEach(r => {
+      if (r.casa) map[r.casa] = { compra: r.compra, venta: r.venta, nombre: r.nombre };
+    });
+    state.meta.dolarRates = map;
+    state.meta.dolarRatesUpdatedAt = new Date().toISOString();
+    // Use MEP "venta" as base reference; fallback to blue, then current
+    const ref = (map.bolsa && map.bolsa.venta) || (map.blue && map.blue.venta) || state.meta.dolarRate;
+    state.meta.dolarRate = ref;
+    await persist('meta');
+    updateDolarPill();
+    return true;
+  } catch (e) {
+    console.warn('Failed to fetch dolar rates:', e);
+    return false;
+  }
+}
+
+function getRateValue(basis, side) {
+  // basis: 'mep' (bolsa), 'blue', 'oficial', 'cripto', 'ccl'
+  // side: 'compra' or 'venta'
+  const map = state.meta.dolarRates || {};
+  const keyMap = { mep: 'bolsa', blue: 'blue', oficial: 'oficial', cripto: 'cripto', ccl: 'contadoconliqui', tarjeta: 'tarjeta', mayorista: 'mayorista' };
+  const key = keyMap[basis] || basis;
+  if (map[key] && map[key][side]) return map[key][side];
+  return state.meta.dolarRate;
+}
+
+function getFintechRate(fintech, side) {
+  // side: 'buy' (the fintech buys USD from you = sell side for you) or 'sell' (you buy USD)
+  const cfg = state.meta.exchangeSpreads[fintech];
+  if (!cfg) return state.meta.dolarRate;
+  const baseSide = side === 'buy' ? 'compra' : 'venta';
+  const base = getRateValue(cfg.basis || 'mep', baseSide);
+  const pct = side === 'buy' ? (cfg.buyPct || 0) : (cfg.sellPct || 0);
+  return base * (1 + pct / 100);
+}
+
+window.openExchangeModal = () => {
+  const rates = state.meta.dolarRates || {};
+  const updatedAt = state.meta.dolarRatesUpdatedAt
+    ? new Date(state.meta.dolarRatesUpdatedAt).toLocaleString('es-AR', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'})
+    : 'nunca';
+
+  const marketRows = [
+    { key: 'oficial', label: 'Oficial' },
+    { key: 'blue',    label: 'Blue' },
+    { key: 'bolsa',   label: 'MEP' },
+    { key: 'contadoconliqui', label: 'CCL' },
+    { key: 'cripto',  label: 'Cripto' },
+    { key: 'tarjeta', label: 'Tarjeta' }
+  ].map(({key, label}) => {
+    const r = rates[key];
+    if (!r) return `<div class="item"><div class="item-info"><div class="item-title">${label}</div><div class="item-sub">Sin datos</div></div></div>`;
+    return `
+      <div class="item">
+        <div class="item-info">
+          <div class="item-title">${label}</div>
+          <div class="item-sub">Compra: $${Math.round(r.compra).toLocaleString('es-AR')} · Venta: $${Math.round(r.venta).toLocaleString('es-AR')}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const fintechs = [
+    { key: 'cocos',   label: 'Cocos Capital' },
+    { key: 'mp',      label: 'Mercado Pago' },
+    { key: 'brubank', label: 'Brubank' }
+  ];
+  const fintechRows = fintechs.map(({key, label}) => {
+    const buyRate = getFintechRate(key, 'buy');   // me venden a este precio (yo compro USD)
+    const sellRate = getFintechRate(key, 'sell'); // ellos me compran (yo vendo USD)
+    const cfg = state.meta.exchangeSpreads[key];
+    return `
+      <div class="item" style="flex-direction: column; align-items: stretch; gap: 8px;">
+        <div style="display:flex; justify-content: space-between; align-items: center;">
+          <div class="item-title">${label}</div>
+          <button class="btn-outline" style="padding:4px 10px; font-size:11px; border-radius: 6px; background: transparent; color: var(--text-soft); border: 1px solid var(--border); cursor: pointer;" onclick="editFintechSpread('${key}', '${label}')">⚙️ Ajustar</button>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div style="background: rgba(34,197,94,0.1); padding: 8px; border-radius: 6px;">
+            <div style="font-size:10px; color: var(--text-soft); text-transform: uppercase;">Comprás USD</div>
+            <div style="font-weight: 700; color: var(--green);">$${Math.round(sellRate).toLocaleString('es-AR')}</div>
+          </div>
+          <div style="background: rgba(239,68,68,0.1); padding: 8px; border-radius: 6px;">
+            <div style="font-size:10px; color: var(--text-soft); text-transform: uppercase;">Vendés USD</div>
+            <div style="font-weight: 700; color: var(--red);">$${Math.round(buyRate).toLocaleString('es-AR')}</div>
+          </div>
+        </div>
+        <div style="font-size: 11px; color: var(--text-soft);">Spread: compra ${cfg.sellPct >= 0 ? '+' : ''}${cfg.sellPct}% / venta ${cfg.buyPct >= 0 ? '+' : ''}${cfg.buyPct}% sobre ${cfg.basis.toUpperCase()}</div>
+      </div>
+    `;
+  }).join('');
+
+  // Best deal calc
+  let bestBuy = { rate: Infinity, name: '' };
+  let bestSell = { rate: 0, name: '' };
+  fintechs.forEach(({key, label}) => {
+    const sellRate = getFintechRate(key, 'sell');
+    const buyRate = getFintechRate(key, 'buy');
+    if (sellRate < bestBuy.rate) bestBuy = { rate: sellRate, name: label };
+    if (buyRate > bestSell.rate) bestSell = { rate: buyRate, name: label };
+  });
+
+  const html = `
+    <div class="form-grid">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 12px; color: var(--text-soft);">Actualizado: ${updatedAt}</div>
+        <button class="btn btn-outline" style="padding: 6px 12px; font-size: 12px;" onclick="refreshDolarRates()">🔄 Actualizar</button>
+      </div>
+
+      <div style="background: linear-gradient(135deg, rgba(34,197,94,0.15), rgba(56,189,248,0.15)); padding: 12px; border-radius: 10px; border: 1px solid var(--border);">
+        <div style="font-size: 12px; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">💡 Mejor opción ahora</div>
+        <div style="font-size: 13px;">Para <strong>comprar</strong> USD: <strong style="color: var(--green);">${bestBuy.name}</strong> ($${Math.round(bestBuy.rate).toLocaleString('es-AR')})</div>
+        <div style="font-size: 13px;">Para <strong>vender</strong> USD: <strong style="color: var(--accent);">${bestSell.name}</strong> ($${Math.round(bestSell.rate).toLocaleString('es-AR')})</div>
+      </div>
+
+      <h3 style="margin-top: 8px;">Cotizaciones de mercado</h3>
+      <div class="item-list">${marketRows}</div>
+
+      <h3 style="margin-top: 12px;">Plataformas (estimado con tu spread)</h3>
+      <div class="item-list">${fintechRows}</div>
+
+      <div style="font-size: 11px; color: var(--text-soft); margin-top: 8px; line-height: 1.5;">
+        💡 Las plataformas no exponen API pública, así que la app calcula los precios sumando el spread que vos configurás sobre el MEP. Revisá las apps cada tanto y ajustá los spreads tocando ⚙️.
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn" onclick="closeModal()" style="flex: 1;">Cerrar</button>
+      </div>
+    </div>
+  `;
+  openModal('💱 Cotizaciones del dólar', html);
+};
+
+window.refreshDolarRates = async () => {
+  showToast('Actualizando cotizaciones...', '');
+  const ok = await fetchDolarRates();
+  if (ok) {
+    showToast('Cotizaciones actualizadas ✓', 'success');
+    openExchangeModal(); // re-render
+    renderAll();
+  } else {
+    showToast('No se pudieron actualizar (sin conexión?)', 'error');
+  }
+};
+
+window.editFintechSpread = (fintech, label) => {
+  const cfg = state.meta.exchangeSpreads[fintech] || { buyPct: 0, sellPct: 0, basis: 'mep' };
+  const html = `
+    <div class="form-grid">
+      <p style="font-size: 13px; color: var(--text-soft);">Configurá el spread de <strong>${label}</strong> sobre la cotización base. Mirá la app y ajustá hasta que los precios coincidan.</p>
+      <div>
+        <label>Cotización base</label>
+        <select id="spreadBasis">
+          <option value="mep" ${cfg.basis === 'mep' ? 'selected' : ''}>MEP (Bolsa)</option>
+          <option value="blue" ${cfg.basis === 'blue' ? 'selected' : ''}>Blue</option>
+          <option value="cripto" ${cfg.basis === 'cripto' ? 'selected' : ''}>Cripto</option>
+          <option value="ccl" ${cfg.basis === 'ccl' ? 'selected' : ''}>CCL</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>% sobre venta (cuando comprás USD)</label>
+          <input type="number" id="spreadSell" step="0.1" value="${cfg.sellPct}" placeholder="ej: 0.5">
+        </div>
+        <div>
+          <label>% sobre compra (cuando vendés USD)</label>
+          <input type="number" id="spreadBuy" step="0.1" value="${cfg.buyPct}" placeholder="ej: -0.5">
+        </div>
+      </div>
+      <div style="font-size: 11px; color: var(--text-soft);">
+        Ejemplos: si Cocos te vende USD a 0.5% sobre el MEP, poné <code>0.5</code> en el primer campo. Si Brubank te lo compra a 2% por debajo del MEP, poné <code>-2</code> en el segundo.
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="openExchangeModal()" style="flex:1;">Cancelar</button>
+        <button class="btn" onclick="saveFintechSpread('${fintech}')" style="flex:1;">Guardar</button>
+      </div>
+    </div>
+  `;
+  openModal('⚙️ Spread de ' + label, html);
+};
+
+window.saveFintechSpread = async (fintech) => {
+  state.meta.exchangeSpreads[fintech] = {
+    basis: $('spreadBasis').value,
+    sellPct: parseFloat($('spreadSell').value) || 0,
+    buyPct: parseFloat($('spreadBuy').value) || 0
+  };
+  await persist('meta');
+  showToast('Spread actualizado ✓', 'success');
+  openExchangeModal();
+};
+
+// =========== MODAL ===========
+function openModal(title, html) {
+  $('modalTitle').textContent = title;
+  $('modalBody').innerHTML = html;
+  $('modal').classList.add('active');
+}
+function closeModal() { $('modal').classList.remove('active'); }
+$('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
+
+// =========== FAB ===========
+$('fabBtn').addEventListener('click', () => {
+  const activeView = document.querySelector('.tab-btn.active').dataset.view;
+  if (activeView === 'dashboard' || activeView === 'tx') openTxModal();
+  else if (activeView === 'inv') openInvModal();
+  else if (activeView === 'acc') openAccModal();
+  else if (activeView === 'rec') openRecModal();
+  else if (activeView === 'btc') {
+    // Pre-fill an investment as BTC/Cripto
+    const existing = findBtcInvestment();
+    if (existing) {
+      openInvModal(existing);
+    } else {
+      const data = state.meta.btc?.lastData;
+      const currentPrice = data ? (state.meta.dolarRate ? data.priceArs : data.priceUsd) : '';
+      const ccy = 'USD'; // default for BTC
+      const priceUsd = data?.priceUsd || '';
+      // Open modal and pre-fill
+      openInvModal({
+        type: 'Cripto',
+        ccy: ccy,
+        name: 'BTC',
+        currentPrice: priceUsd
+      });
+    }
+  }
+});
+
+// =========== TRANSACTIONS ===========
+function openTxModal(tx = null) {
+  const isEdit = !!tx;
+  const today = new Date().toISOString().slice(0, 10);
+  const isTransfer = tx?.type === 'transfer';
+  const html = `
+    <div class="form-grid">
+      <div class="form-row-3">
+        <div><label>Tipo</label>
+          <select id="txType">
+            <option value="expense" ${tx?.type === 'expense' ? 'selected' : ''}>Gasto</option>
+            <option value="income" ${tx?.type === 'income' ? 'selected' : ''}>Ingreso</option>
+            <option value="transfer" ${isTransfer ? 'selected' : ''}>Transfer.</option>
+          </select>
+        </div>
+        <div style="grid-column: span 2;"><label>Fecha</label><input type="date" id="txDate" value="${tx?.date || today}"></div>
+      </div>
+
+      <!-- Common fields -->
+      <div class="form-row">
+        <div><label>Monto</label><input type="number" id="txAmount" step="0.01" value="${tx?.amount || ''}" placeholder="0"></div>
+        <div><label>Moneda</label>
+          <select id="txCcy">
+            <option value="ARS" ${tx?.ccy !== 'USD' ? 'selected' : ''}>ARS</option>
+            <option value="USD" ${tx?.ccy === 'USD' ? 'selected' : ''}>USD</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Non-transfer fields -->
+      <div id="nonTransferFields" style="${isTransfer ? 'display:none' : ''}">
+        <div style="margin-bottom: 10px;"><label>Categoría</label><select id="txCat"></select></div>
+        <div style="margin-bottom: 10px;"><label>Descripción</label><input type="text" id="txDesc" value="${tx?.desc || ''}" placeholder="Ej: Super Coto"></div>
+        <div><label>Cuenta (opcional)</label>
+          <select id="txAcc">
+            <option value="">— Sin asignar —</option>
+            ${state.accounts.map(a => `<option value="${a.id}" ${tx?.accountId === a.id ? 'selected' : ''}>${a.name} (${a.ccy})</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      <!-- Transfer fields -->
+      <div id="transferFields" style="${isTransfer ? '' : 'display:none'}">
+        <div style="margin-bottom: 10px;"><label>Desde cuenta</label>
+          <select id="txFromAcc">
+            <option value="">— Elegí —</option>
+            ${state.accounts.map(a => `<option value="${a.id}" ${tx?.fromAccountId === a.id ? 'selected' : ''}>${a.name} (${a.ccy})</option>`).join('')}
+          </select>
+        </div>
+        <div style="margin-bottom: 10px;"><label>Hacia cuenta</label>
+          <select id="txToAcc">
+            <option value="">— Elegí —</option>
+            ${state.accounts.map(a => `<option value="${a.id}" ${tx?.toAccountId === a.id ? 'selected' : ''}>${a.name} (${a.ccy})</option>`).join('')}
+          </select>
+        </div>
+        <div id="transferConvertBlock" style="display:none; margin-bottom: 10px;">
+          <label>Monto recibido en destino (si cambia moneda)</label>
+          <input type="number" id="txAmountDest" step="0.01" value="${tx?.amountDest || ''}" placeholder="Cuánto entra a la cuenta destino">
+          <div style="font-size: 11px; color: var(--text-soft); margin-top: 4px;">Solo si transferís entre monedas distintas (ej: ARS → USD). Si es misma moneda, dejalo vacío.</div>
+        </div>
+        <div style="margin-bottom: 10px;"><label>Descripción (opcional)</label><input type="text" id="txDescTransfer" value="${tx?.desc || ''}" placeholder="Ej: Compra de USD MEP"></div>
+      </div>
+
+      <div class="modal-actions">
+        ${isEdit ? `<button class="btn btn-danger" onclick="deleteTx('${tx.id}')">Eliminar</button>` : ''}
+        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+        <button class="btn" onclick="saveTx(${isEdit ? `'${tx.id}'` : 'null'})">Guardar</button>
+      </div>
+    </div>
+  `;
+  openModal(isEdit ? 'Editar movimiento' : 'Nuevo movimiento', html);
+
+  const refreshCats = () => {
+    const isExp = $('txType').value === 'expense';
+    const cats = isExp ? CATEGORIES_EXPENSE : CATEGORIES_INCOME;
+    $('txCat').innerHTML = cats.map(c => `<option value="${c}" ${tx?.cat === c ? 'selected' : ''}>${c}</option>`).join('');
+  };
+
+  const toggleFields = () => {
+    const t = $('txType').value;
+    if (t === 'transfer') {
+      $('nonTransferFields').style.display = 'none';
+      $('transferFields').style.display = 'block';
+    } else {
+      $('nonTransferFields').style.display = 'block';
+      $('transferFields').style.display = 'none';
+      refreshCats();
+    }
+    updateTransferConvertBlock();
+  };
+
+  const updateTransferConvertBlock = () => {
+    if ($('txType').value !== 'transfer') return;
+    const fromAcc = state.accounts.find(a => a.id === $('txFromAcc').value);
+    const toAcc = state.accounts.find(a => a.id === $('txToAcc').value);
+    if (fromAcc && toAcc && fromAcc.ccy !== toAcc.ccy) {
+      $('transferConvertBlock').style.display = 'block';
+    } else {
+      $('transferConvertBlock').style.display = 'none';
+    }
+  };
+
+  $('txType').addEventListener('change', toggleFields);
+  if ($('txFromAcc')) $('txFromAcc').addEventListener('change', updateTransferConvertBlock);
+  if ($('txToAcc')) $('txToAcc').addEventListener('change', updateTransferConvertBlock);
+  refreshCats();
+  toggleFields();
+}
+
+async function saveTx(editId) {
+  const type = $('txType').value;
+
+  if (type === 'transfer') {
+    const fromId = $('txFromAcc').value;
+    const toId = $('txToAcc').value;
+    const amount = parseFloat($('txAmount').value) || 0;
+    const ccy = $('txCcy').value;
+    const amountDest = parseFloat($('txAmountDest').value) || 0;
+    const desc = $('txDescTransfer').value.trim();
+
+    if (!fromId || !toId) { showToast('Elegí ambas cuentas', 'error'); return; }
+    if (fromId === toId) { showToast('Origen y destino no pueden ser iguales', 'error'); return; }
+    if (amount <= 0) { showToast('Monto inválido', 'error'); return; }
+
+    const fromAcc = state.accounts.find(a => a.id === fromId);
+    const toAcc = state.accounts.find(a => a.id === toId);
+    if (!fromAcc || !toAcc) { showToast('Cuenta no encontrada', 'error'); return; }
+
+    // Calculate amounts in each account's currency
+    const fromInAccCcy = ccy === fromAcc.ccy ? amount : (ccy === 'USD' ? amount * state.meta.dolarRate : amount / state.meta.dolarRate);
+    let toInAccCcy;
+    if (fromAcc.ccy === toAcc.ccy) {
+      toInAccCcy = fromInAccCcy;
+    } else if (amountDest > 0) {
+      toInAccCcy = amountDest;
+    } else {
+      // Convert via dolarRate
+      toInAccCcy = ccy === toAcc.ccy ? amount : (ccy === 'USD' ? amount * state.meta.dolarRate : amount / state.meta.dolarRate);
+    }
+
+    const data = {
+      id: editId || uid(),
+      type: 'transfer',
+      date: $('txDate').value,
+      amount,
+      ccy,
+      amountDest: amountDest || null,
+      fromAccountId: fromId,
+      toAccountId: toId,
+      desc
+    };
+
+    // Revert old transfer if editing
+    if (editId) {
+      const old = state.transactions.find(t => t.id === editId);
+      if (old && old.type === 'transfer') {
+        const oldFrom = state.accounts.find(a => a.id === old.fromAccountId);
+        const oldTo = state.accounts.find(a => a.id === old.toAccountId);
+        if (oldFrom) {
+          const oldFromInCcy = old.ccy === oldFrom.ccy ? old.amount : (old.ccy === 'USD' ? old.amount * state.meta.dolarRate : old.amount / state.meta.dolarRate);
+          oldFrom.balance += oldFromInCcy;
+        }
+        if (oldTo) {
+          let oldToInCcy;
+          if (oldFrom && oldFrom.ccy === oldTo.ccy) {
+            oldToInCcy = old.ccy === oldTo.ccy ? old.amount : (old.ccy === 'USD' ? old.amount * state.meta.dolarRate : old.amount / state.meta.dolarRate);
+          } else if (old.amountDest) {
+            oldToInCcy = old.amountDest;
+          } else {
+            oldToInCcy = old.ccy === oldTo.ccy ? old.amount : (old.ccy === 'USD' ? old.amount * state.meta.dolarRate : old.amount / state.meta.dolarRate);
+          }
+          oldTo.balance -= oldToInCcy;
+        }
+      }
+    }
+
+    // Apply new transfer
+    fromAcc.balance -= fromInAccCcy;
+    toAcc.balance += toInAccCcy;
+    await persist('accounts');
+
+    if (editId) {
+      const idx = state.transactions.findIndex(t => t.id === editId);
+      if (idx >= 0) state.transactions[idx] = data;
+    } else {
+      state.transactions.unshift(data);
+    }
+    if (data.date) currentTxMonth = data.date.slice(0, 7);
+    await persist('transactions');
+    closeModal();
+    showToast('Transferencia guardada ✓', 'success');
+    renderAll();
+    return;
+  }
+
+  // Regular expense/income
+  const data = {
+    id: editId || uid(),
+    type,
+    date: $('txDate').value,
+    amount: parseFloat($('txAmount').value) || 0,
+    ccy: $('txCcy').value,
+    cat: $('txCat').value,
+    desc: $('txDesc').value.trim(),
+    accountId: $('txAcc').value || null
+  };
+  if (data.amount <= 0) { showToast('Ingresá un monto válido', 'error'); return; }
+
+  if (data.accountId) {
+    const acc = state.accounts.find(a => a.id === data.accountId);
+    if (acc) {
+      if (editId) {
+        const old = state.transactions.find(t => t.id === editId);
+        if (old && old.accountId === data.accountId && old.type !== 'transfer') {
+          const oldInAccCcy = old.ccy === acc.ccy ? old.amount : (old.ccy === 'USD' ? old.amount * state.meta.dolarRate : old.amount / state.meta.dolarRate);
+          if (old.type === 'expense') acc.balance += oldInAccCcy;
+          else acc.balance -= oldInAccCcy;
+        }
+      }
+      const newInAccCcy = data.ccy === acc.ccy ? data.amount : (data.ccy === 'USD' ? data.amount * state.meta.dolarRate : data.amount / state.meta.dolarRate);
+      if (data.type === 'expense') acc.balance -= newInAccCcy;
+      else acc.balance += newInAccCcy;
+      await persist('accounts');
+    }
+  }
+
+  if (editId) {
+    const idx = state.transactions.findIndex(t => t.id === editId);
+    if (idx >= 0) state.transactions[idx] = data;
+  } else {
+    state.transactions.unshift(data);
+  }
+  if (data.date) currentTxMonth = data.date.slice(0, 7);
+  await persist('transactions');
+  closeModal();
+  showToast('Guardado ✓', 'success');
+  renderAll();
+}
+
+async function deleteTx(id) {
+  if (!confirm('¿Eliminar este movimiento?')) return;
+  const tx = state.transactions.find(t => t.id === id);
+
+  if (tx && tx.type === 'transfer') {
+    // Revert transfer
+    const fromAcc = state.accounts.find(a => a.id === tx.fromAccountId);
+    const toAcc = state.accounts.find(a => a.id === tx.toAccountId);
+    if (fromAcc) {
+      const fromInCcy = tx.ccy === fromAcc.ccy ? tx.amount : (tx.ccy === 'USD' ? tx.amount * state.meta.dolarRate : tx.amount / state.meta.dolarRate);
+      fromAcc.balance += fromInCcy;
+    }
+    if (toAcc) {
+      let toInCcy;
+      if (fromAcc && fromAcc.ccy === toAcc.ccy) {
+        toInCcy = tx.ccy === toAcc.ccy ? tx.amount : (tx.ccy === 'USD' ? tx.amount * state.meta.dolarRate : tx.amount / state.meta.dolarRate);
+      } else if (tx.amountDest) {
+        toInCcy = tx.amountDest;
+      } else {
+        toInCcy = tx.ccy === toAcc.ccy ? tx.amount : (tx.ccy === 'USD' ? tx.amount * state.meta.dolarRate : tx.amount / state.meta.dolarRate);
+      }
+      toAcc.balance -= toInCcy;
+    }
+    await persist('accounts');
+  } else if (tx && tx.accountId) {
+    const acc = state.accounts.find(a => a.id === tx.accountId);
+    if (acc) {
+      const inAccCcy = tx.ccy === acc.ccy ? tx.amount : (tx.ccy === 'USD' ? tx.amount * state.meta.dolarRate : tx.amount / state.meta.dolarRate);
+      if (tx.type === 'expense') acc.balance += inAccCcy;
+      else acc.balance -= inAccCcy;
+      await persist('accounts');
+    }
+  }
+  state.transactions = state.transactions.filter(t => t.id !== id);
+  await persist('transactions');
+  closeModal();
+  renderAll();
+}
+
+function renderTx() {
+  // Update month label
+  const [year, month] = currentTxMonth.split('-');
+  const monthDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+  const monthLabel = monthDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+  $('txMonthLabel').textContent = '📅 ' + monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+
+  // Filter by month first
+  const monthTx = state.transactions.filter(t => t.date.startsWith(currentTxMonth));
+
+  // Calculate month summary (transfers excluded)
+  let income = 0, expenses = 0;
+  monthTx.forEach(t => {
+    if (t.type === 'transfer') return;
+    const ars = toArs(t.amount, t.ccy);
+    if (t.type === 'income') income += ars;
+    else if (t.type === 'expense') expenses += ars;
+  });
+  const balance = income - expenses;
+  $('txMonthIncome').textContent = fmt(income, 'ARS');
+  $('txMonthExpenses').textContent = fmt(expenses, 'ARS');
+  $('txMonthBalance').textContent = fmt(balance, 'ARS');
+  $('txMonthBalance').style.color = balance >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Then filter by type for the list
+  const filtered = monthTx
+    .filter(t => {
+      if (currentTxFilter === 'all') return true;
+      if (currentTxFilter === 'transfer') return t.type === 'transfer';
+      return t.type === currentTxFilter;
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  $('txCount').textContent = filtered.length === 0 ? 'Sin movimientos' :
+    filtered.length === 1 ? '1 movimiento' : filtered.length + ' movimientos';
+
+  const list = $('txList');
+  if (filtered.length === 0) {
+    if (monthTx.length === 0) {
+      list.innerHTML = '<div class="empty"><div class="empty-icon">📅</div>Sin movimientos en ' + monthLabel + '.<br>Tocá el + para agregar uno.</div>';
+    } else {
+      list.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div>Sin movimientos del tipo seleccionado este mes.</div>';
+    }
+    return;
+  }
+  list.innerHTML = filtered.map(t => {
+    if (t.type === 'transfer') {
+      const fromAcc = state.accounts.find(a => a.id === t.fromAccountId);
+      const toAcc = state.accounts.find(a => a.id === t.toAccountId);
+      const fromName = fromAcc ? fromAcc.name : '?';
+      const toName = toAcc ? toAcc.name : '?';
+      return `
+        <div class="item" onclick="editTx('${t.id}')" style="border-left: 3px solid var(--accent);">
+          <div class="item-info">
+            <div class="item-title">↔ ${t.desc || 'Transferencia'}</div>
+            <div class="item-sub">${fromName} → ${toName} · ${formatDate(t.date)}</div>
+          </div>
+          <div class="item-amount" style="color: var(--accent);">
+            ${fmt(t.amount, t.ccy)}
+          </div>
+        </div>
+      `;
+    }
+    const acc = t.accountId ? state.accounts.find(a => a.id === t.accountId) : null;
+    return `
+      <div class="item" onclick="editTx('${t.id}')">
+        <div class="item-info">
+          <div class="item-title">${t.desc || t.cat}</div>
+          <div class="item-sub">${t.cat} · ${formatDate(t.date)}${acc ? ' · ' + acc.name : ''}</div>
+        </div>
+        <div class="item-amount ${t.type === 'income' ? 'green' : 'red'}">
+          ${t.type === 'income' ? '+' : '−'} ${fmt(t.amount, t.ccy)}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.changeTxMonth = (delta) => {
+  const [year, month] = currentTxMonth.split('-').map(Number);
+  const d = new Date(year, month - 1 + delta, 1);
+  currentTxMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  renderTx();
+};
+
+window.openMonthPicker = () => {
+  // Build a list of available months from existing transactions, plus current month
+  const months = new Set();
+  state.transactions.forEach(t => {
+    if (t.date) months.add(t.date.slice(0, 7));
+  });
+  // Add current month and a few neighbors
+  const now = new Date();
+  for (let i = -2; i <= 2; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    months.add(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+  }
+  const sorted = Array.from(months).sort().reverse();
+
+  const html = `
+    <div class="form-grid">
+      <p style="font-size: 13px; color: var(--text-soft);">Elegí el mes que querés ver:</p>
+      <div style="display: grid; gap: 6px; max-height: 50vh; overflow-y: auto;">
+        ${sorted.map(ym => {
+          const [y, m] = ym.split('-').map(Number);
+          const lbl = new Date(y, m - 1, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+          const isCurrent = ym === currentTxMonth;
+          const txCount = state.transactions.filter(t => t.date.startsWith(ym)).length;
+          return `
+            <button class="btn ${isCurrent ? '' : 'btn-outline'}" style="text-align: left; justify-content: flex-start;" onclick="selectMonth('${ym}')">
+              ${isCurrent ? '✓ ' : ''}${lbl.charAt(0).toUpperCase() + lbl.slice(1)} ${txCount > 0 ? '· ' + txCount + ' mov.' : ''}
+            </button>
+          `;
+        }).join('')}
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal()" style="flex:1;">Cancelar</button>
+      </div>
+    </div>
+  `;
+  openModal('📅 Seleccionar mes', html);
+};
+
+window.selectMonth = (ym) => {
+  currentTxMonth = ym;
+  closeModal();
+  renderTx();
+};
+
+window.editTx = (id) => { const tx = state.transactions.find(t => t.id === id); if (tx) openTxModal(tx); };
+
+document.querySelectorAll('#txFilters .chip').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('#txFilters .chip').forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    currentTxFilter = c.dataset.filter;
+    renderTx();
+  });
+});
+
+function formatDate(s) {
+  const d = new Date(s + 'T00:00');
+  return d.toLocaleDateString('es-AR', {day: '2-digit', month: 'short'});
+}
+
+// =========== BITCOIN MODULE ===========
+
+// Calculate RSI from price array (closing prices)
+function calculateRSI(prices, period = 14) {
+  if (!prices || prices.length < period + 1) return null;
+  let gains = 0, losses = 0;
+  // Initial average
+  for (let i = 1; i <= period; i++) {
+    const diff = prices[i] - prices[i - 1];
+    if (diff >= 0) gains += diff;
+    else losses += Math.abs(diff);
+  }
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+  // Smooth subsequent
+  for (let i = period + 1; i < prices.length; i++) {
+    const diff = prices[i] - prices[i - 1];
+    const gain = diff >= 0 ? diff : 0;
+    const loss = diff < 0 ? Math.abs(diff) : 0;
+    avgGain = (avgGain * (period - 1) + gain) / period;
+    avgLoss = (avgLoss * (period - 1) + loss) / period;
+  }
+  if (avgLoss === 0) return 100;
+  const rs = avgGain / avgLoss;
+  return 100 - (100 / (1 + rs));
+}
+
+function calculateMA(prices, period) {
+  if (!prices || prices.length < period) return null;
+  const slice = prices.slice(-period);
+  return slice.reduce((a, b) => a + b, 0) / period;
+}
+
+async function fetchBtcData() {
+  try {
+    // Fetch price + 24h/7d/30d in one call
+    const priceResp = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false');
+    if (!priceResp.ok) throw new Error('Price fetch failed');
+    const priceJson = await priceResp.json();
+    const md = priceJson.market_data;
+
+    // Historical for RSI/MA: 365 days daily
+    const histResp = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily');
+    if (!histResp.ok) throw new Error('History fetch failed');
+    const histJson = await histResp.json();
+    const dailyPrices = histJson.prices.map(p => p[1]);
+
+    // Weekly prices: take every 7th day from daily
+    const weeklyPrices = [];
+    for (let i = dailyPrices.length - 1; i >= 0; i -= 7) weeklyPrices.unshift(dailyPrices[i]);
+
+    const rsiDaily = calculateRSI(dailyPrices, 14);
+    const rsiWeekly = calculateRSI(weeklyPrices, 14);
+    const ma200 = calculateMA(dailyPrices, 200);
+
+    // Fear & Greed
+    let fgiValue = null, fgiClass = null;
+    try {
+      const fgiResp = await fetch('https://api.alternative.me/fng/?limit=1');
+      if (fgiResp.ok) {
+        const fgiJson = await fgiResp.json();
+        if (fgiJson.data && fgiJson.data[0]) {
+          fgiValue = parseInt(fgiJson.data[0].value);
+          fgiClass = fgiJson.data[0].value_classification;
+        }
+      }
+    } catch (e) { console.warn('FGI fetch failed:', e); }
+
+    const data = {
+      priceUsd: md.current_price.usd,
+      priceArs: md.current_price.usd * (state.meta.dolarRate || 1440),
+      change24h: md.price_change_percentage_24h,
+      change7d: md.price_change_percentage_7d,
+      change30d: md.price_change_percentage_30d,
+      rsiDaily,
+      rsiWeekly,
+      ma200,
+      vsMa200Pct: ma200 ? ((md.current_price.usd - ma200) / ma200 * 100) : null,
+      fgiValue,
+      fgiClass,
+      fetchedAt: new Date().toISOString()
+    };
+
+    state.meta.btc.lastData = data;
+    state.meta.btc.lastFetchedAt = data.fetchedAt;
+    await persist('meta');
+    return data;
+  } catch (e) {
+    console.warn('Failed to fetch BTC data:', e);
+    return null;
+  }
+}
+
+// Compute composite score 0-100. Lower = better buy zone, higher = better sell zone
+function computeBtcSignal(data) {
+  if (!data) return null;
+  const components = [];
+
+  // RSI Daily (20%): lower = buy zone
+  let rsiDailyScore = 50;
+  if (data.rsiDaily !== null) {
+    rsiDailyScore = Math.max(0, Math.min(100, data.rsiDaily));
+    components.push({
+      label: 'RSI 1d',
+      value: data.rsiDaily.toFixed(1),
+      score: rsiDailyScore,
+      weight: 20,
+      hint: data.rsiDaily < 35 ? '🟢 sobreventa' : data.rsiDaily > 70 ? '🔴 sobrecompra' : '⚪ neutral'
+    });
+  }
+
+  // RSI Weekly (20%)
+  let rsiWeeklyScore = 50;
+  if (data.rsiWeekly !== null) {
+    rsiWeeklyScore = Math.max(0, Math.min(100, data.rsiWeekly));
+    components.push({
+      label: 'RSI 1w',
+      value: data.rsiWeekly.toFixed(1),
+      score: rsiWeeklyScore,
+      weight: 20,
+      hint: data.rsiWeekly < 35 ? '🟢 sobreventa' : data.rsiWeekly > 70 ? '🔴 sobrecompra' : '⚪ neutral'
+    });
+  }
+
+  // Fear & Greed (20%): F&G value 0-100, low = fear = buy zone
+  let fgiScore = 50;
+  if (data.fgiValue !== null) {
+    fgiScore = data.fgiValue;
+    components.push({
+      label: 'F&G Index',
+      value: data.fgiValue + ' (' + (data.fgiClass || '—') + ')',
+      score: fgiScore,
+      weight: 20,
+      hint: data.fgiValue < 25 ? '🟢 miedo extremo' : data.fgiValue > 75 ? '🔴 codicia extrema' : '⚪ neutral'
+    });
+  }
+
+  // vs MA200 (20%): below = buy zone, above = sell zone
+  let maScore = 50;
+  if (data.vsMa200Pct !== null) {
+    // -30% from MA -> score 0 (max buy), +50% above MA -> score 100 (max sell)
+    maScore = Math.max(0, Math.min(100, 50 + data.vsMa200Pct));
+    const sign = data.vsMa200Pct >= 0 ? '+' : '';
+    components.push({
+      label: 'vs MA200',
+      value: sign + data.vsMa200Pct.toFixed(1) + '%',
+      score: maScore,
+      weight: 20,
+      hint: data.vsMa200Pct < -10 ? '🟢 muy debajo' : data.vsMa200Pct > 30 ? '🔴 muy arriba' : '⚪ cerca'
+    });
+  }
+
+  // Position P&L (20%): if user has a BTC position, factor in their gain
+  const btcInv = findBtcInvestment();
+  let pnlScore = 50;
+  if (btcInv && btcInv.invested > 0) {
+    const pnlPct = ((btcInv.current - btcInv.invested) / btcInv.invested) * 100;
+    // -50% loss -> score 0, +100% gain -> score 100
+    pnlScore = Math.max(0, Math.min(100, 50 + pnlPct / 2));
+    const sign = pnlPct >= 0 ? '+' : '';
+    components.push({
+      label: 'Tu P&L',
+      value: sign + pnlPct.toFixed(1) + '%',
+      score: pnlScore,
+      weight: 20,
+      hint: pnlPct < -20 ? '🟢 perdiendo' : pnlPct > 30 ? '🟠 buena ganancia' : '⚪ neutral'
+    });
+  } else {
+    components.push({
+      label: 'Tu P&L',
+      value: 'Sin posición',
+      score: 50,
+      weight: 20,
+      hint: ''
+    });
+  }
+
+  // Weighted average
+  let totalScore = 0, totalWeight = 0;
+  components.forEach(c => {
+    totalScore += c.score * c.weight;
+    totalWeight += c.weight;
+  });
+  const finalScore = totalWeight > 0 ? totalScore / totalWeight : 50;
+
+  return { finalScore: Math.round(finalScore), components };
+}
+
+function getSignalLabel(score) {
+  if (score <= 20) return { text: '🟢 Comprá fuerte', color: '#22c55e' };
+  if (score <= 40) return { text: '🟢 Comprá DCA', color: '#22c55e' };
+  if (score <= 60) return { text: '⚪ Esperá', color: '#94a3b8' };
+  if (score <= 80) return { text: '🟠 Vendé parcial', color: '#f59e0b' };
+  return { text: '🔴 Vendé fuerte', color: '#ef4444' };
+}
+
+function findBtcInvestment() {
+  return state.investments.find(i =>
+    i.type === 'Cripto' &&
+    i.name && (i.name.toUpperCase() === 'BTC' || i.name.toUpperCase() === 'BITCOIN')
+  );
+}
+
+async function refreshBtcData() {
+  showToast('Obteniendo datos de BTC...', '');
+  const data = await fetchBtcData();
+  if (data) {
+    showToast('Datos actualizados ✓', 'success');
+    renderBtc();
+  } else {
+    showToast('No se pudieron obtener los datos', 'error');
+  }
+}
+window.refreshBtcData = refreshBtcData;
+
+function renderBtc() {
+  const data = state.meta.btc?.lastData;
+  if (!data) {
+    $('btcPriceUsd').textContent = '—';
+    $('btcPriceArs').textContent = 'Tocá 🔄 para cargar datos';
+    $('signalLabel').textContent = '—';
+    $('signalScore').textContent = '—';
+    $('signalComponents').innerHTML = '<div style="color:var(--text-soft); font-size:12px; text-align:center;">Sin datos cargados</div>';
+    $('btcDataNote').textContent = '';
+    renderDcaPlan();
+    renderTpPlan();
+    renderBtcPosition();
+    return;
+  }
+
+  // Price block
+  $('btcPriceUsd').textContent = 'USD ' + data.priceUsd.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+  $('btcPriceArs').textContent = '$' + Math.round(data.priceArs).toLocaleString('es-AR') + ' (al MEP $' + Math.round(state.meta.dolarRate).toLocaleString('es-AR') + ')';
+
+  const renderChange = (id, val) => {
+    if (val === null || val === undefined) { $(id).textContent = '—'; return; }
+    const sign = val >= 0 ? '+' : '';
+    $(id).textContent = sign + val.toFixed(1) + '%';
+    $(id).style.color = val >= 0 ? 'var(--green)' : 'var(--red)';
+  };
+  renderChange('btcChange24h', data.change24h);
+  renderChange('btcChange7d', data.change7d);
+  renderChange('btcChange30d', data.change30d);
+
+  // Indicators
+  $('btcFgi').textContent = data.fgiValue !== null ? data.fgiValue : '—';
+  $('btcRsiD').textContent = data.rsiDaily !== null ? data.rsiDaily.toFixed(1) : '—';
+  $('btcRsiW').textContent = data.rsiWeekly !== null ? data.rsiWeekly.toFixed(1) : '—';
+  if (data.vsMa200Pct !== null) {
+    const sign = data.vsMa200Pct >= 0 ? '+' : '';
+    $('btcVsMa').textContent = sign + data.vsMa200Pct.toFixed(1) + '%';
+    $('btcVsMa').style.color = data.vsMa200Pct >= 0 ? 'var(--green)' : 'var(--red)';
+  } else {
+    $('btcVsMa').textContent = '—';
+  }
+
+  const fetchedDate = new Date(data.fetchedAt);
+  $('btcDataNote').textContent = 'Actualizado: ' + fetchedDate.toLocaleString('es-AR', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+
+  // Signal
+  const signal = computeBtcSignal(data);
+  if (signal) {
+    const lbl = getSignalLabel(signal.finalScore);
+    $('signalLabel').textContent = lbl.text;
+    $('signalLabel').style.color = lbl.color;
+    $('signalScore').textContent = signal.finalScore;
+    $('signalScore').style.color = lbl.color;
+    $('signalMarker').style.left = `calc(${signal.finalScore}% - 2px)`;
+
+    $('signalComponents').innerHTML = signal.components.map(c => `
+      <div style="display:flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: var(--bg-soft); border-radius: 6px; font-size: 12px;">
+        <div style="flex: 1;"><strong>${c.label}</strong>: ${c.value}</div>
+        <div style="color: var(--text-soft); font-size: 11px;">${c.hint}</div>
+      </div>
+    `).join('');
+  }
+
+  renderBtcPosition();
+  renderDcaPlan();
+  renderTpPlan();
+}
+
+function renderBtcPosition() {
+  const btcInv = findBtcInvestment();
+  const container = $('btcPositionContent');
+  if (!btcInv) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">₿</div>Sin posición BTC. <br>Cargá una inversión tipo "Cripto" con nombre "BTC" en la pestaña Inversiones.</div>';
+    return;
+  }
+  const profit = (btcInv.current || 0) - (btcInv.invested || 0);
+  const profitPct = btcInv.invested > 0 ? (profit / btcInv.invested * 100) : 0;
+  const ccy = btcInv.ccy || 'ARS';
+  const profitColor = profit >= 0 ? 'var(--green)' : 'var(--red)';
+
+  container.innerHTML = `
+    <div style="display: grid; gap: 8px;">
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <div class="stat"><div class="stat-label">Cantidad</div><div class="stat-value" style="font-size:16px;">${btcInv.qty || 0} BTC</div></div>
+        <div class="stat"><div class="stat-label">Precio prom.</div><div class="stat-value" style="font-size:16px;">${fmt(btcInv.avgPrice || 0, ccy)}</div></div>
+      </div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <div class="stat"><div class="stat-label">Invertido</div><div class="stat-value" style="font-size:16px;">${fmt(btcInv.invested || 0, ccy)}</div></div>
+        <div class="stat"><div class="stat-label">Valor actual</div><div class="stat-value" style="font-size:16px;">${fmt(btcInv.current || 0, ccy)}</div></div>
+      </div>
+      <div style="background: var(--bg-soft); padding: 12px; border-radius: 10px; text-align: center;">
+        <div style="font-size: 11px; color: var(--text-soft); text-transform: uppercase;">Ganancia / Pérdida</div>
+        <div style="font-size: 20px; font-weight: 700; margin-top: 4px; color: ${profitColor};">
+          ${profit >= 0 ? '+' : ''}${fmt(profit, ccy)} (${profit >= 0 ? '+' : ''}${profitPct.toFixed(1)}%)
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderDcaPlan() {
+  const container = $('dcaPlanList');
+  const plan = state.meta.btc?.dcaPlan || [];
+  const data = state.meta.btc?.lastData;
+  const currentRsi = data?.rsiDaily;
+  const fgiValue = data?.fgiValue;
+
+  if (plan.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-soft); font-size:12px; padding: 8px;">Sin tramos definidos. Tocá ⚙️ Ajustar.</div>';
+    return;
+  }
+
+  container.innerHTML = plan.map((t, idx) => {
+    const triggered = currentRsi !== null && currentRsi !== undefined && currentRsi < t.rsiBelow;
+    const fgiBonus = fgiValue !== null && fgiValue !== undefined && fgiValue < 30 ? ' + miedo' : '';
+    const status = triggered ? `<span style="color:var(--green); font-weight:600;">🟢 LISTO PARA EJECUTAR${fgiBonus}</span>` : `<span style="color:var(--text-soft);">Esperando RSI &lt; ${t.rsiBelow}</span>`;
+    return `
+      <div style="background: var(--bg-soft); padding: 10px 12px; border-radius: 8px; margin-bottom: 6px; ${triggered ? 'border-left: 3px solid var(--green);' : ''}">
+        <div style="display:flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 600; font-size: 13px;">${t.label}</div>
+            <div style="font-size: 11px; color: var(--text-soft); margin-top: 2px;">RSI &lt; ${t.rsiBelow} → comprar ${t.pctOfCapital}% del capital</div>
+          </div>
+          <div style="font-size: 11px;">${status}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderTpPlan() {
+  const container = $('tpPlanList');
+  const plan = state.meta.btc?.tpPlan || [];
+  const btcInv = findBtcInvestment();
+
+  if (plan.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-soft); font-size:12px; padding: 8px;">Sin tramos definidos. Tocá ⚙️ Ajustar.</div>';
+    return;
+  }
+
+  let currentGainPct = null;
+  if (btcInv && btcInv.invested > 0) {
+    currentGainPct = ((btcInv.current - btcInv.invested) / btcInv.invested) * 100;
+  }
+
+  container.innerHTML = plan.map((t, idx) => {
+    const triggered = currentGainPct !== null && currentGainPct >= t.gainPct;
+    const status = currentGainPct === null
+      ? '<span style="color:var(--text-soft);">Cargá tu posición BTC</span>'
+      : triggered
+        ? `<span style="color:var(--amber); font-weight:600;">🟠 LISTO PARA VENDER</span>`
+        : `<span style="color:var(--text-soft);">Falta +${(t.gainPct - currentGainPct).toFixed(1)}%</span>`;
+    return `
+      <div style="background: var(--bg-soft); padding: 10px 12px; border-radius: 8px; margin-bottom: 6px; ${triggered ? 'border-left: 3px solid var(--amber);' : ''}">
+        <div style="display:flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 600; font-size: 13px;">${t.label}</div>
+            <div style="font-size: 11px; color: var(--text-soft); margin-top: 2px;">Si ganancia ≥ +${t.gainPct}% → vender ${t.sellPct}% del holdings</div>
+          </div>
+          <div style="font-size: 11px;">${status}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.editDcaPlan = () => {
+  const plan = state.meta.btc?.dcaPlan || [];
+  const html = `
+    <div class="form-grid">
+      <p style="font-size: 13px; color: var(--text-soft);">Definí tramos de compra: cuando el RSI baja del nivel indicado, te muestra señal de compra para ese % de capital.</p>
+      <div id="dcaPlanEditor">
+        ${plan.map((t, idx) => `
+          <div class="form-row-3" style="margin-bottom: 6px;">
+            <input type="text" data-dca-idx="${idx}" data-dca-field="label" value="${t.label}" placeholder="Etiqueta">
+            <input type="number" data-dca-idx="${idx}" data-dca-field="rsiBelow" value="${t.rsiBelow}" placeholder="RSI <" min="0" max="100">
+            <input type="number" data-dca-idx="${idx}" data-dca-field="pctOfCapital" value="${t.pctOfCapital}" placeholder="% capital" min="0" max="100">
+          </div>
+        `).join('')}
+      </div>
+      <div style="display:flex; gap: 6px;">
+        <button class="btn btn-outline" onclick="addDcaTramo()" style="flex:1;">+ Agregar tramo</button>
+        <button class="btn btn-outline" onclick="removeDcaTramo()" style="flex:1;">− Quitar último</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal()" style="flex:1;">Cancelar</button>
+        <button class="btn" onclick="saveDcaPlan()" style="flex:1;">Guardar</button>
+      </div>
+    </div>
+  `;
+  openModal('🎯 Plan DCA', html);
+};
+
+window.addDcaTramo = () => {
+  if (!state.meta.btc.dcaPlan) state.meta.btc.dcaPlan = [];
+  state.meta.btc.dcaPlan.push({ rsiBelow: 30, pctOfCapital: 25, label: 'Tramo ' + (state.meta.btc.dcaPlan.length + 1) });
+  editDcaPlan();
+};
+
+window.removeDcaTramo = () => {
+  if (state.meta.btc.dcaPlan && state.meta.btc.dcaPlan.length > 0) {
+    state.meta.btc.dcaPlan.pop();
+    editDcaPlan();
+  }
+};
+
+window.saveDcaPlan = async () => {
+  const newPlan = [];
+  document.querySelectorAll('#dcaPlanEditor .form-row-3').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    newPlan.push({
+      label: inputs[0].value.trim() || ('Tramo ' + (newPlan.length + 1)),
+      rsiBelow: parseFloat(inputs[1].value) || 30,
+      pctOfCapital: parseFloat(inputs[2].value) || 25
+    });
+  });
+  state.meta.btc.dcaPlan = newPlan;
+  await persist('meta');
+  closeModal();
+  showToast('Plan DCA guardado ✓', 'success');
+  renderBtc();
+};
+
+window.editTpPlan = () => {
+  const plan = state.meta.btc?.tpPlan || [];
+  const html = `
+    <div class="form-grid">
+      <p style="font-size: 13px; color: var(--text-soft);">Definí niveles de venta: cuando tu BTC sube X% desde el precio promedio, te muestra señal de venta parcial.</p>
+      <div id="tpPlanEditor">
+        ${plan.map((t, idx) => `
+          <div class="form-row-3" style="margin-bottom: 6px;">
+            <input type="text" data-tp-idx="${idx}" data-tp-field="label" value="${t.label}" placeholder="Etiqueta">
+            <input type="number" data-tp-idx="${idx}" data-tp-field="gainPct" value="${t.gainPct}" placeholder="Ganancia %" min="0">
+            <input type="number" data-tp-idx="${idx}" data-tp-field="sellPct" value="${t.sellPct}" placeholder="Vender %" min="0" max="100">
+          </div>
+        `).join('')}
+      </div>
+      <div style="display:flex; gap: 6px;">
+        <button class="btn btn-outline" onclick="addTpTramo()" style="flex:1;">+ Agregar nivel</button>
+        <button class="btn btn-outline" onclick="removeTpTramo()" style="flex:1;">− Quitar último</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal()" style="flex:1;">Cancelar</button>
+        <button class="btn" onclick="saveTpPlan()" style="flex:1;">Guardar</button>
+      </div>
+    </div>
+  `;
+  openModal('🎯 Plan Take-Profit', html);
+};
+
+window.addTpTramo = () => {
+  if (!state.meta.btc.tpPlan) state.meta.btc.tpPlan = [];
+  state.meta.btc.tpPlan.push({ gainPct: 30, sellPct: 25, label: 'TP ' + (state.meta.btc.tpPlan.length + 1) });
+  editTpPlan();
+};
+
+window.removeTpTramo = () => {
+  if (state.meta.btc.tpPlan && state.meta.btc.tpPlan.length > 0) {
+    state.meta.btc.tpPlan.pop();
+    editTpPlan();
+  }
+};
+
+window.saveTpPlan = async () => {
+  const newPlan = [];
+  document.querySelectorAll('#tpPlanEditor .form-row-3').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    newPlan.push({
+      label: inputs[0].value.trim() || ('TP ' + (newPlan.length + 1)),
+      gainPct: parseFloat(inputs[1].value) || 20,
+      sellPct: parseFloat(inputs[2].value) || 25
+    });
+  });
+  state.meta.btc.tpPlan = newPlan;
+  await persist('meta');
+  closeModal();
+  showToast('Plan TP guardado ✓', 'success');
+  renderBtc();
+};
+
+// =========== PATRIMONY HISTORY ===========
+function calcCurrentNetWorth() {
+  let accArs = 0, invArs = 0;
+  state.accounts.forEach(a => { accArs += toArs(a.balance, a.ccy); });
+  state.investments.forEach(i => { invArs += toArs(i.current || 0, i.ccy); });
+  return { accArs, invArs, totalArs: accArs + invArs, totalUsd: (accArs + invArs) / state.meta.dolarRate };
+}
+
+async function takeSnapshotIfNeeded() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (state.meta.lastSnapshotDate === today) return;
+
+  const nw = calcCurrentNetWorth();
+  if (!state.meta.history) state.meta.history = [];
+
+  // If there's already a snapshot for today (rare race condition), replace it
+  state.meta.history = state.meta.history.filter(h => h.date !== today);
+  state.meta.history.push({
+    date: today,
+    accArs: Math.round(nw.accArs),
+    invArs: Math.round(nw.invArs),
+    totalArs: Math.round(nw.totalArs),
+    dolarRate: state.meta.dolarRate,
+    totalUsd: Math.round(nw.totalUsd * 100) / 100
+  });
+
+  // Keep only last 730 entries (~2 years)
+  if (state.meta.history.length > 730) {
+    state.meta.history = state.meta.history.slice(-730);
+  }
+  state.meta.lastSnapshotDate = today;
+  await persist('meta');
+}
+
+// =========== RECURRING EXPENSES ===========
+function openRecModal(rec = null) {
+  const isEdit = !!rec;
+  const html = `
+    <div class="form-grid">
+      <div class="form-row">
+        <div><label>Tipo</label>
+          <select id="recType">
+            <option value="expense" ${rec?.type === 'expense' ? 'selected' : ''}>Gasto</option>
+            <option value="income" ${rec?.type === 'income' ? 'selected' : ''}>Ingreso</option>
+          </select>
+        </div>
+        <div><label>Modo</label>
+          <select id="recMode">
+            <option value="auto" ${rec?.mode === 'auto' ? 'selected' : ''}>Automático</option>
+            <option value="confirm" ${rec?.mode !== 'auto' ? 'selected' : ''}>Avisar y confirmar</option>
+          </select>
+        </div>
+      </div>
+      <div><label>Descripción</label>
+        <input type="text" id="recDesc" value="${rec?.desc || ''}" placeholder="Ej: Alquiler, Netflix, Heladera Frávega">
+      </div>
+      <div class="form-row">
+        <div><label>Monto</label><input type="number" id="recAmount" step="0.01" value="${rec?.amount || ''}" placeholder="0"></div>
+        <div><label>Moneda</label>
+          <select id="recCcy">
+            <option value="ARS" ${rec?.ccy !== 'USD' ? 'selected' : ''}>ARS</option>
+            <option value="USD" ${rec?.ccy === 'USD' ? 'selected' : ''}>USD</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div><label>Categoría</label><select id="recCat"></select></div>
+        <div><label>Día del mes</label>
+          <input type="number" id="recDay" min="1" max="31" value="${rec?.day || 5}" placeholder="1-31">
+        </div>
+      </div>
+      <div class="form-row">
+        <div><label>Cuenta (opcional)</label>
+          <select id="recAcc">
+            <option value="">— Sin asignar —</option>
+            ${state.accounts.map(a => `<option value="${a.id}" ${rec?.accountId === a.id ? 'selected' : ''}>${a.name}</option>`).join('')}
+          </select>
+        </div>
+        <div><label>Tipo de duración</label>
+          <select id="recDuration">
+            <option value="forever" ${rec?.duration !== 'installments' ? 'selected' : ''}>Indefinido</option>
+            <option value="installments" ${rec?.duration === 'installments' ? 'selected' : ''}>En cuotas</option>
+          </select>
+        </div>
+      </div>
+      <div id="installmentsBlock" style="display:none">
+        <div class="form-row">
+          <div><label>Total de cuotas</label>
+            <input type="number" id="recTotalInst" min="1" max="120" value="${rec?.totalInstallments || ''}" placeholder="Ej: 12">
+          </div>
+          <div><label>Cuotas ya pagadas</label>
+            <input type="number" id="recPaidInst" min="0" value="${rec?.paidInstallments || 0}" placeholder="0">
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div><label>Activo desde</label>
+          <input type="date" id="recStartDate" value="${rec?.startDate || new Date().toISOString().slice(0,10)}">
+        </div>
+        <div><label>Estado</label>
+          <select id="recActive">
+            <option value="true" ${rec?.active !== false ? 'selected' : ''}>Activo</option>
+            <option value="false" ${rec?.active === false ? 'selected' : ''}>Pausado</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        ${isEdit ? `<button class="btn btn-danger" onclick="deleteRec('${rec.id}')">Eliminar</button>` : ''}
+        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+        <button class="btn" onclick="saveRec(${isEdit ? `'${rec.id}'` : 'null'})">Guardar</button>
+      </div>
+    </div>
+  `;
+  openModal(isEdit ? 'Editar recurrente' : 'Nuevo recurrente', html);
+
+  const refreshCats = () => {
+    const isExp = $('recType').value === 'expense';
+    const cats = isExp ? CATEGORIES_EXPENSE : CATEGORIES_INCOME;
+    $('recCat').innerHTML = cats.map(c => `<option value="${c}" ${rec?.cat === c ? 'selected' : ''}>${c}</option>`).join('');
+  };
+  $('recType').addEventListener('change', refreshCats);
+  refreshCats();
+
+  const toggleInst = () => {
+    $('installmentsBlock').style.display = $('recDuration').value === 'installments' ? 'block' : 'none';
+  };
+  $('recDuration').addEventListener('change', toggleInst);
+  toggleInst();
+}
+
+async function saveRec(editId) {
+  const duration = $('recDuration').value;
+  const data = {
+    id: editId || uid(),
+    type: $('recType').value,
+    mode: $('recMode').value,
+    desc: $('recDesc').value.trim(),
+    amount: parseFloat($('recAmount').value) || 0,
+    ccy: $('recCcy').value,
+    cat: $('recCat').value,
+    day: parseInt($('recDay').value) || 1,
+    accountId: $('recAcc').value || null,
+    duration,
+    totalInstallments: duration === 'installments' ? (parseInt($('recTotalInst').value) || 0) : null,
+    paidInstallments: duration === 'installments' ? (parseInt($('recPaidInst').value) || 0) : 0,
+    startDate: $('recStartDate').value,
+    active: $('recActive').value === 'true',
+    lastAppliedYM: editId ? (state.meta.recurring.find(r => r.id === editId)?.lastAppliedYM || null) : null
+  };
+  if (!data.desc) { showToast('Ingresá una descripción', 'error'); return; }
+  if (data.amount <= 0) { showToast('Ingresá un monto válido', 'error'); return; }
+  if (data.day < 1 || data.day > 31) { showToast('Día debe ser 1-31', 'error'); return; }
+  if (duration === 'installments' && (!data.totalInstallments || data.totalInstallments < 1)) {
+    showToast('Ingresá total de cuotas', 'error'); return;
+  }
+
+  if (!state.meta.recurring) state.meta.recurring = [];
+  if (editId) {
+    const idx = state.meta.recurring.findIndex(r => r.id === editId);
+    if (idx >= 0) state.meta.recurring[idx] = data;
+  } else {
+    state.meta.recurring.push(data);
+  }
+  await persist('meta');
+  closeModal();
+  showToast('Guardado ✓', 'success');
+  await processRecurring();
+  renderAll();
+}
+
+async function deleteRec(id) {
+  if (!confirm('¿Eliminar este recurrente? Los movimientos ya generados se mantienen.')) return;
+  state.meta.recurring = (state.meta.recurring || []).filter(r => r.id !== id);
+  await persist('meta');
+  closeModal();
+  renderAll();
+}
+
+window.editRec = (id) => {
+  const rec = (state.meta.recurring || []).find(r => r.id === id);
+  if (rec) openRecModal(rec);
+};
+
+// Returns the date that the next due payment would be, or null if completed/inactive
+function getNextDueDate(rec, now = new Date()) {
+  if (!rec.active) return null;
+  if (rec.duration === 'installments' && rec.paidInstallments >= rec.totalInstallments) return null;
+
+  const start = new Date(rec.startDate + 'T00:00');
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Determine the candidate month: current or next
+  let candidate = new Date(today.getFullYear(), today.getMonth(), 1);
+  if (start > candidate) candidate = new Date(start.getFullYear(), start.getMonth(), 1);
+
+  // Adjust day to month length
+  const lastDay = new Date(candidate.getFullYear(), candidate.getMonth() + 1, 0).getDate();
+  const day = Math.min(rec.day, lastDay);
+  let dueDate = new Date(candidate.getFullYear(), candidate.getMonth(), day);
+
+  // If the due date this month already passed AND has been applied, move to next month
+  const ym = dueDate.toISOString().slice(0, 7);
+  if (rec.lastAppliedYM === ym) {
+    candidate = new Date(candidate.getFullYear(), candidate.getMonth() + 1, 1);
+    const ld2 = new Date(candidate.getFullYear(), candidate.getMonth() + 1, 0).getDate();
+    dueDate = new Date(candidate.getFullYear(), candidate.getMonth(), Math.min(rec.day, ld2));
+  }
+
+  return dueDate;
+}
+
+// Returns true if a due date has arrived (today >= due) and not yet applied
+function isDueNow(rec, now = new Date()) {
+  const due = getNextDueDate(rec, now);
+  if (!due) return false;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return today >= due;
+}
+
+async function processRecurring() {
+  if (!state.meta.recurring) state.meta.recurring = [];
+  const now = new Date();
+  let createdAuto = 0;
+  let pendingConfirm = 0;
+  let needSave = false;
+
+  for (const rec of state.meta.recurring) {
+    if (!isDueNow(rec, now)) continue;
+    if (rec.mode === 'auto') {
+      await applyRecurring(rec, now, false);
+      createdAuto++;
+      needSave = true;
+    } else {
+      pendingConfirm++;
+    }
+  }
+
+  if (needSave) await persist('transactions');
+  state.meta.lastRecurringCheck = now.toISOString();
+  await persist('meta');
+
+  if (createdAuto > 0) showToast(`✓ ${createdAuto} movimiento${createdAuto > 1 ? 's' : ''} recurrente${createdAuto > 1 ? 's' : ''} creado${createdAuto > 1 ? 's' : ''}`, 'success');
+}
+
+async function applyRecurring(rec, now = new Date(), saveImmediately = true) {
+  const due = getNextDueDate(rec, now);
+  if (!due) return;
+  const ym = due.toISOString().slice(0, 7);
+  const dateStr = due.toISOString().slice(0, 10);
+
+  let descSuffix = '';
+  if (rec.duration === 'installments') {
+    const cuotaNum = (rec.paidInstallments || 0) + 1;
+    descSuffix = ` (${cuotaNum}/${rec.totalInstallments})`;
+  }
+
+  const tx = {
+    id: uid(),
+    type: rec.type,
+    date: dateStr,
+    amount: rec.amount,
+    ccy: rec.ccy,
+    cat: rec.cat,
+    desc: rec.desc + descSuffix,
+    accountId: rec.accountId || null,
+    fromRecurring: rec.id
+  };
+
+  // Update account balance if assigned
+  if (tx.accountId) {
+    const acc = state.accounts.find(a => a.id === tx.accountId);
+    if (acc) {
+      const inAccCcy = tx.ccy === acc.ccy ? tx.amount : (tx.ccy === 'USD' ? tx.amount * state.meta.dolarRate : tx.amount / state.meta.dolarRate);
+      if (tx.type === 'expense') acc.balance -= inAccCcy;
+      else acc.balance += inAccCcy;
+      if (saveImmediately) await persist('accounts');
+      else pendingSync.add('accounts'); // queue without flush
+    }
+  }
+
+  state.transactions.unshift(tx);
+
+  // Update recurring state
+  rec.lastAppliedYM = ym;
+  if (rec.duration === 'installments') {
+    rec.paidInstallments = (rec.paidInstallments || 0) + 1;
+    if (rec.paidInstallments >= rec.totalInstallments) rec.active = false;
+  }
+
+  if (saveImmediately) {
+    await persist('transactions');
+    await persist('meta');
+  }
+}
+
+window.confirmRecurring = async (id) => {
+  const rec = state.meta.recurring.find(r => r.id === id);
+  if (!rec) return;
+  await applyRecurring(rec, new Date(), true);
+  showToast('Movimiento creado ✓', 'success');
+  renderAll();
+};
+
+window.skipRecurring = async (id) => {
+  const rec = state.meta.recurring.find(r => r.id === id);
+  if (!rec) return;
+  if (!confirm('¿Saltar este vencimiento? No se va a crear el movimiento de este mes.')) return;
+  const due = getNextDueDate(rec);
+  if (due) {
+    rec.lastAppliedYM = due.toISOString().slice(0, 7);
+    if (rec.duration === 'installments') {
+      rec.paidInstallments = (rec.paidInstallments || 0) + 1;
+      if (rec.paidInstallments >= rec.totalInstallments) rec.active = false;
+    }
+    await persist('meta');
+    renderAll();
+  }
+};
+
+function renderRec() {
+  const list = $('recList');
+  const pending = $('pendingList');
+  const pendingSection = $('pendingApprovalSection');
+  const recurring = state.meta.recurring || [];
+
+  // Pending confirmations
+  const pendingItems = recurring.filter(r => isDueNow(r) && r.mode === 'confirm');
+  if (pendingItems.length > 0) {
+    pendingSection.style.display = 'block';
+    pending.innerHTML = pendingItems.map(r => {
+      const due = getNextDueDate(r);
+      const dueStr = due ? due.toLocaleDateString('es-AR', {day: '2-digit', month: 'short'}) : '';
+      const cuota = r.duration === 'installments' ? ` · cuota ${(r.paidInstallments || 0) + 1}/${r.totalInstallments}` : '';
+      return `
+        <div class="item" style="border-left: 3px solid var(--amber);">
+          <div class="item-info">
+            <div class="item-title">${r.desc}</div>
+            <div class="item-sub">${r.cat} · venció ${dueStr}${cuota}</div>
+          </div>
+          <div style="display:flex; gap:6px; flex-shrink:0;">
+            <button class="btn" style="padding:6px 10px; font-size:12px;" onclick="confirmRecurring('${r.id}')">Confirmar</button>
+            <button class="btn btn-outline" style="padding:6px 10px; font-size:12px;" onclick="skipRecurring('${r.id}')">Saltar</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    pendingSection.style.display = 'none';
+  }
+
+  // All recurring
+  if (recurring.length === 0) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🔁</div>Sin gastos recurrentes. Tocá el + para agregar.</div>';
+    return;
+  }
+  list.innerHTML = recurring
+    .slice()
+    .sort((a, b) => (a.active === b.active ? 0 : a.active ? -1 : 1))
+    .map(r => {
+      const due = getNextDueDate(r);
+      const dueStr = due ? due.toLocaleDateString('es-AR', {day: '2-digit', month: 'short'}) : '—';
+      const isInst = r.duration === 'installments';
+      const cuotaInfo = isInst ? ` · ${r.paidInstallments || 0}/${r.totalInstallments} cuotas` : '';
+      const status = !r.active ? ' · ⏸️ pausado' : (isInst && r.paidInstallments >= r.totalInstallments ? ' · ✓ finalizado' : '');
+      const modeIcon = r.mode === 'auto' ? '⚡' : '👋';
+      return `
+        <div class="item" onclick="editRec('${r.id}')" style="opacity: ${r.active ? 1 : 0.55}">
+          <div class="item-info">
+            <div class="item-title">${modeIcon} ${r.desc}</div>
+            <div class="item-sub">${r.cat} · día ${r.day}${cuotaInfo}${status}${r.active ? ' · próx: ' + dueStr : ''}</div>
+          </div>
+          <div class="item-amount ${r.type === 'income' ? 'green' : 'red'}">
+            ${r.type === 'income' ? '+' : '−'} ${fmt(r.amount, r.ccy)}
+          </div>
+        </div>
+      `;
+    }).join('');
+}
+
+function renderUpcoming() {
+  const card = $('upcomingCard');
+  const list = $('upcomingList');
+  const recurring = state.meta.recurring || [];
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const in30 = new Date(today.getTime() + 30 * 86400000);
+
+  const upcoming = recurring
+    .filter(r => r.active && (!r.duration || r.duration !== 'installments' || r.paidInstallments < r.totalInstallments))
+    .map(r => ({ rec: r, due: getNextDueDate(r, now) }))
+    .filter(x => x.due && x.due <= in30)
+    .sort((a, b) => a.due - b.due);
+
+  if (upcoming.length === 0) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+  list.innerHTML = upcoming.map(({rec: r, due}) => {
+    const dueStr = due.toLocaleDateString('es-AR', {day: '2-digit', month: 'short'});
+    const daysLeft = Math.ceil((due - today) / 86400000);
+    const dayLabel = daysLeft <= 0 ? '⏰ vencido' : (daysLeft === 0 ? 'hoy' : daysLeft === 1 ? 'mañana' : `en ${daysLeft} días`);
+    const cuota = r.duration === 'installments' ? ` · cuota ${(r.paidInstallments || 0) + 1}/${r.totalInstallments}` : '';
+    return `
+      <div class="item" onclick="document.querySelector('[data-view=rec]').click()">
+        <div class="item-info">
+          <div class="item-title">${r.desc}</div>
+          <div class="item-sub">${dueStr} · ${dayLabel}${cuota}</div>
+        </div>
+        <div class="item-amount ${r.type === 'income' ? 'green' : 'red'}">
+          ${r.type === 'income' ? '+' : '−'} ${fmt(r.amount, r.ccy)}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// =========== INVESTMENTS ===========
+function openInvModal(inv = null) {
+  const isEdit = !!inv;
+  const html = `
+    <div class="form-grid">
+      <div class="form-row">
+        <div><label>Tipo</label>
+          <select id="invType">
+            ${INVESTMENT_TYPES.map(t => `<option value="${t}" ${inv?.type === t ? 'selected' : ''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div><label>Moneda</label>
+          <select id="invCcy">
+            <option value="ARS" ${inv?.ccy !== 'USD' ? 'selected' : ''}>ARS</option>
+            <option value="USD" ${inv?.ccy === 'USD' ? 'selected' : ''}>USD</option>
+          </select>
+        </div>
+      </div>
+      <div><label>Nombre / Ticker</label><input type="text" id="invName" value="${inv?.name || ''}" placeholder="Ej: AAPL, IBIT, ON YPF"></div>
+      <div class="form-row-3">
+        <div><label>Cantidad</label><input type="number" id="invQty" step="0.0001" value="${inv?.qty ?? ''}" placeholder="Ej: 10"></div>
+        <div><label>Precio compra prom.</label><input type="number" id="invAvgPrice" step="0.0001" value="${inv?.avgPrice ?? ''}" placeholder="por unidad"></div>
+        <div><label>Precio actual</label><input type="number" id="invCurrentPrice" step="0.0001" value="${inv?.currentPrice ?? ''}" placeholder="por unidad"></div>
+      </div>
+      <div class="computed-row">
+        <div><div class="lbl">Invertido</div><div class="val" id="invComputedInvested">—</div></div>
+        <div><div class="lbl">Valor actual</div><div class="val" id="invComputedCurrent">—</div></div>
+        <div><div class="lbl">Ganancia</div><div class="val" id="invComputedPL">—</div></div>
+      </div>
+      <div><label>Notas (opcional)</label><input type="text" id="invNote" value="${inv?.note || ''}" placeholder="Ej: broker IOL, vence 2027"></div>
+      <div class="modal-actions">
+        ${isEdit ? `<button class="btn btn-danger" onclick="deleteInv('${inv.id}')">Eliminar</button>` : ''}
+        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+        <button class="btn" onclick="saveInv(${isEdit ? `'${inv.id}'` : 'null'})">Guardar</button>
+      </div>
+    </div>
+  `;
+  openModal(isEdit ? 'Editar inversión' : 'Nueva inversión', html);
+
+  const updateComputed = () => {
+    const qty = parseFloat($('invQty').value) || 0;
+    const avg = parseFloat($('invAvgPrice').value) || 0;
+    const cur = parseFloat($('invCurrentPrice').value) || 0;
+    const ccy = $('invCcy').value;
+    const invested = qty * avg;
+    const current = qty * cur;
+    const pl = current - invested;
+    $('invComputedInvested').textContent = invested > 0 ? fmt(invested, ccy) : '—';
+    $('invComputedCurrent').textContent = current > 0 ? fmt(current, ccy) : '—';
+    if (invested > 0 && cur > 0) {
+      const pct = (pl / invested * 100).toFixed(1);
+      $('invComputedPL').textContent = `${pl >= 0 ? '+' : ''}${fmt(pl, ccy)} (${pct}%)`;
+      $('invComputedPL').style.color = pl >= 0 ? 'var(--green)' : 'var(--red)';
+    } else {
+      $('invComputedPL').textContent = '—';
+      $('invComputedPL').style.color = '';
+    }
+  };
+  ['invQty', 'invAvgPrice', 'invCurrentPrice', 'invCcy'].forEach(id => {
+    $(id).addEventListener('input', updateComputed);
+    $(id).addEventListener('change', updateComputed);
+  });
+  updateComputed();
+}
+
+async function saveInv(editId) {
+  const qty = parseFloat($('invQty').value) || 0;
+  const avgPrice = parseFloat($('invAvgPrice').value) || 0;
+  const currentPrice = parseFloat($('invCurrentPrice').value) || 0;
+  const data = {
+    id: editId || uid(),
+    type: $('invType').value,
+    ccy: $('invCcy').value,
+    name: $('invName').value.trim(),
+    qty, avgPrice, currentPrice,
+    invested: qty * avgPrice,
+    current: qty * currentPrice,
+    note: $('invNote').value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+  if (!data.name) { showToast('Ingresá un nombre o ticker', 'error'); return; }
+  if (qty <= 0) { showToast('Ingresá la cantidad', 'error'); return; }
+  if (currentPrice <= 0) { showToast('Ingresá el precio actual', 'error'); return; }
+
+  if (editId) {
+    const idx = state.investments.findIndex(i => i.id === editId);
+    if (idx >= 0) state.investments[idx] = data;
+  } else {
+    state.investments.push(data);
+  }
+  await persist('investments');
+  closeModal();
+  showToast('Guardado ✓', 'success');
+  renderAll();
+}
+
+async function deleteInv(id) {
+  if (!confirm('¿Eliminar esta inversión?')) return;
+  state.investments = state.investments.filter(i => i.id !== id);
+  await persist('investments');
+  closeModal();
+  renderAll();
+}
+
+window.editInv = (id) => { const inv = state.investments.find(i => i.id === id); if (inv) openInvModal(inv); };
+
+document.querySelectorAll('#histCcyToggle button').forEach(b => {
+  b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('#histCcyToggle button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    histDisplayCcy = b.dataset.ccy;
+    renderChartHistory();
+  });
+});
+
+document.querySelectorAll('#invCcyToggle button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#invCcyToggle button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    invDisplayCcy = b.dataset.ccy;
+    renderInv();
+  });
+});
+
+function renderInv() {
+  const list = $('invList');
+  if (state.investments.length === 0) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">📈</div>Sin inversiones. Tocá el + para agregar.</div>';
+    $('invTotal').textContent = fmt(0, invDisplayCcy);
+    $('invInvestedTotal').textContent = fmt(0, invDisplayCcy);
+    $('invPL').textContent = fmt(0, invDisplayCcy);
+    $('invPLPct').textContent = '0%';
+    return;
+  }
+  let totalCurrent = 0, totalInvested = 0;
+  const conv = invDisplayCcy === 'USD' ? toUsd : toArs;
+  state.investments.forEach(i => {
+    totalCurrent += conv(i.current || 0, i.ccy);
+    totalInvested += conv(i.invested || 0, i.ccy);
+  });
+  const pl = totalCurrent - totalInvested;
+  const plPct = totalInvested > 0 ? (pl / totalInvested * 100) : 0;
+  $('invTotal').textContent = fmt(totalCurrent, invDisplayCcy);
+  $('invInvestedTotal').textContent = fmt(totalInvested, invDisplayCcy);
+  $('invPL').textContent = (pl >= 0 ? '+' : '') + fmt(pl, invDisplayCcy);
+  $('invPL').className = 'stat-value ' + (pl >= 0 ? 'green' : 'red');
+  $('invPLPct').textContent = (plPct >= 0 ? '+' : '') + plPct.toFixed(1) + '%';
+  $('invPLPct').className = 'stat-value ' + (plPct >= 0 ? 'green' : 'red');
+
+  list.innerHTML = state.investments
+    .slice()
+    .sort((a, b) => conv(b.current || 0, b.ccy) - conv(a.current || 0, a.ccy))
+    .map(i => {
+      const profit = (i.current || 0) - (i.invested || 0);
+      const profitPct = i.invested > 0 ? (profit / i.invested * 100) : 0;
+      const profitDisplay = i.invested > 0 ? `${profit >= 0 ? '+' : ''}${profitPct.toFixed(1)}%` : '—';
+      const qtyText = i.qty ? `${i.qty} u.` : '';
+      const isAuto = canAutoUpdate(i);
+      const autoBtn = isAuto
+        ? `<button class="icon-btn" title="Actualizar autom\u00e1ticamente desde mercado" onclick="event.stopPropagation(); quickUpdateAuto('${i.id}')" style="background: var(--bg-card); padding: 6px 10px; border-radius: 6px; font-size: 14px; color: var(--amber);">⚡</button>`
+        : '';
+      return `
+        <div class="item" style="position: relative;">
+          <div class="item-info" onclick="editInv('${i.id}')" style="cursor:pointer;">
+            <div class="item-title">${i.name}</div>
+            <div class="item-sub">${i.type} · ${i.ccy}${qtyText ? ' · ' + qtyText : ''}${i.note ? ' · ' + i.note : ''}</div>
+          </div>
+          <div style="display:flex; align-items: center; gap: 6px;">
+            ${autoBtn}
+            <button class="icon-btn" title="Actualizar manualmente" onclick="event.stopPropagation(); quickUpdatePrice('${i.id}')" style="background: var(--bg-card); padding: 6px 10px; border-radius: 6px; font-size: 14px; color: var(--accent);">↻</button>
+            <div class="item-amount" onclick="editInv('${i.id}')" style="cursor:pointer;">
+              ${fmt(conv(i.current || 0, i.ccy), invDisplayCcy)}
+              <div class="item-sub" style="text-align:right; color: ${profit >= 0 ? 'var(--green)' : 'var(--red)'}">${profitDisplay}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+}
+
+window.quickUpdateAuto = async (id) => {
+  const inv = state.investments.find(i => i.id === id);
+  if (!inv) return;
+  // Make sure we have prices
+  if (!lastPricesData) {
+    showToast('Cargando precios...', '');
+    const data = await fetchAllPrices();
+    if (!data) { showToast('No se pudieron obtener precios', 'error'); return; }
+  }
+  const priceData = getPriceForTicker(inv.name);
+  if (!priceData) {
+    showToast(`Ticker "${inv.name}" no encontrado en mercado`, 'error');
+    return;
+  }
+  const oldPrice = inv.currentPrice || 0;
+  inv.currentPrice = priceData.price;
+  inv.current = (inv.qty || 0) * priceData.price;
+  inv.updatedAt = new Date().toISOString();
+  await persist('investments');
+  const diff = priceData.price - oldPrice;
+  const sign = diff >= 0 ? '+' : '';
+  showToast(`${inv.name}: ${fmt(priceData.price, inv.ccy)} (${sign}${diff.toFixed(2)})`, 'success');
+  renderAll();
+};
+
+window.updateAllPrices = async () => {
+  const btn = $('btnUpdateAllPrices');
+  const info = $('pricesUpdateInfo');
+  btn.disabled = true;
+  btn.textContent = '⏳ Trayendo precios...';
+  info.textContent = '';
+  const data = await fetchAllPrices();
+  if (!data) {
+    btn.disabled = false;
+    btn.textContent = '⚡ Actualizar precios automáticos';
+    info.textContent = '❌ No se pudo conectar';
+    showToast('Error al traer precios', 'error');
+    return;
+  }
+  let updated = 0, notFound = [];
+  state.investments.forEach(i => {
+    if (canAutoUpdate(i)) {
+      const priceData = getPriceForTicker(i.name);
+      if (priceData) {
+        i.currentPrice = priceData.price;
+        i.current = (i.qty || 0) * priceData.price;
+        i.updatedAt = new Date().toISOString();
+        updated++;
+      }
+    } else if (i.name && !['FCI', 'Plazo fijo'].includes(i.type)) {
+      // Has a name but not in market data
+      const priceData = getPriceForTicker(i.name);
+      if (!priceData) notFound.push(i.name);
+    }
+  });
+  if (updated > 0) await persist('investments');
+  btn.disabled = false;
+  btn.textContent = '⚡ Actualizar precios automáticos';
+  const fetchedDate = lastPricesFetchedAt ? new Date(lastPricesFetchedAt) : new Date();
+  const timeStr = fetchedDate.toLocaleTimeString('es-AR', {hour: '2-digit', minute: '2-digit'});
+  info.textContent = `Actualizadas ${updated}/${state.investments.length} · ${timeStr}` + (notFound.length > 0 ? ` · No encontradas: ${notFound.slice(0,3).join(', ')}${notFound.length > 3 ? '...' : ''}` : '');
+  if (updated > 0) {
+    showToast(`✓ ${updated} precio${updated > 1 ? 's' : ''} actualizado${updated > 1 ? 's' : ''}`, 'success');
+  } else {
+    showToast('No hubo precios para actualizar', 'error');
+  }
+  renderAll();
+};
+
+window.quickUpdatePrice = (id) => {
+  const inv = state.investments.find(i => i.id === id);
+  if (!inv) return;
+  const html = `
+    <div class="form-grid">
+      <div style="background: var(--bg-soft); padding: 10px 12px; border-radius: 8px;">
+        <div style="font-size: 12px; color: var(--text-soft); text-transform: uppercase;">${inv.name}</div>
+        <div style="font-size: 13px; margin-top: 4px;">${inv.qty || 0} u. × precio actual = <strong id="quickNewTotal">${fmt(inv.current || 0, inv.ccy)}</strong></div>
+      </div>
+      <div>
+        <label>Precio actual por unidad (${inv.ccy})</label>
+        <input type="number" id="quickPrice" step="0.0001" value="${inv.currentPrice || 0}" placeholder="Precio por unidad" autofocus>
+      </div>
+      <div style="font-size: 12px; color: var(--text-soft);">
+        Precio anterior: ${fmt(inv.currentPrice || 0, inv.ccy)} (cargado ${inv.updatedAt ? new Date(inv.updatedAt).toLocaleDateString('es-AR', {day:'2-digit', month:'short'}) : 'sin fecha'})
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal()" style="flex:1;">Cancelar</button>
+        <button class="btn" onclick="saveQuickPrice('${id}')" style="flex:1;">Actualizar</button>
+      </div>
+    </div>
+  `;
+  openModal('↻ Actualizar precio', html);
+
+  // Live preview of new total
+  const updateTotal = () => {
+    const newPrice = parseFloat($('quickPrice').value) || 0;
+    const newTotal = (inv.qty || 0) * newPrice;
+    $('quickNewTotal').textContent = fmt(newTotal, inv.ccy);
+  };
+  $('quickPrice').addEventListener('input', updateTotal);
+  setTimeout(() => { $('quickPrice').focus(); $('quickPrice').select(); }, 100);
+};
+
+window.saveQuickPrice = async (id) => {
+  const inv = state.investments.find(i => i.id === id);
+  if (!inv) return;
+  const newPrice = parseFloat($('quickPrice').value) || 0;
+  if (newPrice <= 0) { showToast('Precio inválido', 'error'); return; }
+  inv.currentPrice = newPrice;
+  inv.current = (inv.qty || 0) * newPrice;
+  inv.updatedAt = new Date().toISOString();
+  await persist('investments');
+  closeModal();
+  showToast('Precio actualizado ✓', 'success');
+  renderAll();
+};
+
+// =========== ACCOUNTS ===========
+function openAccModal(acc = null) {
+  const isEdit = !!acc;
+  const html = `
+    <div class="form-grid">
+      <div><label>Nombre</label><input type="text" id="accName" value="${acc?.name || ''}" placeholder="Ej: Galicia ahorro, Mercado Pago"></div>
+      <div class="form-row">
+        <div><label>Tipo</label>
+          <select id="accType">
+            ${ACCOUNT_TYPES.map(t => `<option value="${t}" ${acc?.type === t ? 'selected' : ''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div><label>Moneda</label>
+          <select id="accCcy">
+            <option value="ARS" ${acc?.ccy !== 'USD' ? 'selected' : ''}>ARS</option>
+            <option value="USD" ${acc?.ccy === 'USD' ? 'selected' : ''}>USD</option>
+          </select>
+        </div>
+      </div>
+      <div><label>Saldo actual</label><input type="number" id="accBalance" step="0.01" value="${acc?.balance ?? ''}" placeholder="0"></div>
+      <div class="modal-actions">
+        ${isEdit ? `<button class="btn btn-danger" onclick="deleteAcc('${acc.id}')">Eliminar</button>` : ''}
+        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+        <button class="btn" onclick="saveAcc(${isEdit ? `'${acc.id}'` : 'null'})">Guardar</button>
+      </div>
+    </div>
+  `;
+  openModal(isEdit ? 'Editar cuenta' : 'Nueva cuenta', html);
+}
+
+async function saveAcc(editId) {
+  const data = {
+    id: editId || uid(),
+    name: $('accName').value.trim(),
+    type: $('accType').value,
+    ccy: $('accCcy').value,
+    balance: parseFloat($('accBalance').value) || 0
+  };
+  if (!data.name) { showToast('Ingresá un nombre', 'error'); return; }
+  if (editId) {
+    const idx = state.accounts.findIndex(a => a.id === editId);
+    if (idx >= 0) state.accounts[idx] = data;
+  } else {
+    state.accounts.push(data);
+  }
+  await persist('accounts');
+  closeModal();
+  showToast('Guardado ✓', 'success');
+  renderAll();
+}
+
+async function deleteAcc(id) {
+  if (!confirm('¿Eliminar esta cuenta? Los movimientos asociados quedarán sin cuenta.')) return;
+  state.accounts = state.accounts.filter(a => a.id !== id);
+  state.transactions.forEach(t => { if (t.accountId === id) t.accountId = null; });
+  await persist('accounts');
+  await persist('transactions');
+  closeModal();
+  renderAll();
+}
+
+window.editAcc = (id) => { const acc = state.accounts.find(a => a.id === id); if (acc) openAccModal(acc); };
+
+function renderAcc() {
+  const list = $('accList');
+  if (state.accounts.length === 0) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🏦</div>Sin cuentas. Tocá el + para agregar.</div>';
+    $('accTotalArs').textContent = fmt(0, 'ARS');
+    $('accTotalUsd').textContent = fmt(0, 'USD');
+    return;
+  }
+  let totalArs = 0, totalUsd = 0;
+  state.accounts.forEach(a => { if (a.ccy === 'USD') totalUsd += a.balance; else totalArs += a.balance; });
+  $('accTotalArs').textContent = fmt(totalArs, 'ARS');
+  $('accTotalUsd').textContent = fmt(totalUsd, 'USD');
+
+  list.innerHTML = state.accounts.map(a => `
+    <div class="item" onclick="editAcc('${a.id}')">
+      <div class="item-info">
+        <div class="item-title">${a.name}</div>
+        <div class="item-sub">${a.type} · ${a.ccy}</div>
+      </div>
+      <div class="item-amount">${fmt(a.balance, a.ccy)}</div>
+    </div>
+  `).join('');
+}
+
+// =========== DASHBOARD ===========
+function renderDashboard() {
+  let accArs = 0, invArs = 0;
+  state.accounts.forEach(a => { accArs += toArs(a.balance, a.ccy); });
+  state.investments.forEach(i => { invArs += toArs(i.current || 0, i.ccy); });
+  const total = accArs + invArs;
+
+  $('netWorthTotal').textContent = fmt(total, 'ARS');
+  $('netWorthUsd').textContent = fmt(toUsd(total, 'ARS'), 'USD');
+  $('bdAccounts').textContent = fmt(accArs, 'ARS');
+  $('bdInvestments').textContent = fmt(invArs, 'ARS');
+
+  const ym = new Date().toISOString().slice(0, 7);
+  const monthTx = state.transactions.filter(t => t.date.startsWith(ym));
+  let income = 0, expenses = 0;
+  const catTotals = {};
+  monthTx.forEach(t => {
+    if (t.type === 'transfer') return;
+    const ars = toArs(t.amount, t.ccy);
+    if (t.type === 'income') income += ars;
+    else { expenses += ars; catTotals[t.cat] = (catTotals[t.cat] || 0) + ars; }
+  });
+  const balance = income - expenses;
+  $('statIncome').textContent = fmt(income, 'ARS');
+  $('statExpenses').textContent = fmt(expenses, 'ARS');
+  $('statBalance').textContent = fmt(balance, 'ARS');
+  $('statBalance').className = 'stat-value ' + (balance >= 0 ? 'green' : 'red');
+  $('statTxCount').textContent = monthTx.length;
+  $('bdMonthExpenses').textContent = fmt(expenses, 'ARS');
+
+  renderChartCategories(catTotals);
+  renderChartHistory();
+  renderChartNetWorth(accArs, invArs);
+}
+
+const CHART_COLORS = ['#38bdf8', '#22c55e', '#f59e0b', '#a78bfa', '#ef4444', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16'];
+
+function renderChartCategories(catTotals) {
+  const labels = Object.keys(catTotals);
+  const data = Object.values(catTotals);
+  const ctx = $('chartCategories').getContext('2d');
+  if (chartCategories) chartCategories.destroy();
+  if (labels.length === 0) {
+    ctx.canvas.parentElement.innerHTML = '<div class="empty"><div class="empty-icon">📊</div>Sin gastos este mes</div><canvas id="chartCategories"></canvas>';
+    return;
+  }
+  chartCategories = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: CHART_COLORS.slice(0, labels.length), borderWidth: 0 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 }, padding: 8, boxWidth: 12 } },
+        tooltip: { callbacks: { label: (c) => c.label + ': ' + fmt(c.parsed, 'ARS') + ' (' + (c.parsed / data.reduce((a, b) => a + b, 0) * 100).toFixed(1) + '%)' } }
+      }
+    }
+  });
+}
+
+function renderChartHistory() {
+  const ctx = $('chartHistory').getContext('2d');
+  if (chartHistory) chartHistory.destroy();
+  const history = state.meta.history || [];
+  if (history.length < 2) {
+    ctx.canvas.parentElement.innerHTML = '<div class="empty"><div class="empty-icon">📅</div>Necesitamos al menos 2 días de datos.<br>Volvé mañana para ver tu evolución.</div><canvas id="chartHistory"></canvas>';
+    return;
+  }
+  const sorted = history.slice().sort((a, b) => a.date.localeCompare(b.date));
+  const labels = sorted.map(h => {
+    const d = new Date(h.date + 'T00:00');
+    return d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' });
+  });
+  const data = sorted.map(h => histDisplayCcy === 'USD' ? h.totalUsd : h.totalArs);
+  const isUp = data[data.length - 1] >= data[0];
+  const color = isUp ? '#22c55e' : '#ef4444';
+
+  chartHistory = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Patrimonio',
+        data,
+        borderColor: color,
+        backgroundColor: color + '20',
+        fill: true,
+        tension: 0.3,
+        pointRadius: data.length > 30 ? 0 : 3,
+        pointHoverRadius: 5,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (c) => fmt(c.parsed.y, histDisplayCcy)
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#94a3b8', maxTicksLimit: 8, font: { size: 10 } },
+          grid: { color: '#33415540' }
+        },
+        y: {
+          ticks: {
+            color: '#94a3b8',
+            font: { size: 10 },
+            callback: (v) => histDisplayCcy === 'USD' ? 'USD ' + (v/1000).toFixed(1) + 'K' : '$' + (v/1000000).toFixed(1) + 'M'
+          },
+          grid: { color: '#33415540' }
+        }
+      }
+    }
+  });
+}
+
+
+function renderChartNetWorth(accArs, invArs) {
+  const ctx = $('chartNetWorth').getContext('2d');
+  if (chartNetWorth) chartNetWorth.destroy();
+  if (accArs + invArs === 0) {
+    ctx.canvas.parentElement.innerHTML = '<div class="empty"><div class="empty-icon">💰</div>Sin patrimonio cargado</div><canvas id="chartNetWorth"></canvas>';
+    return;
+  }
+  chartNetWorth = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: ['Cuentas', 'Inversiones'], datasets: [{ data: [accArs, invArs], backgroundColor: ['#38bdf8', '#a78bfa'], borderWidth: 0 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 12 } },
+        tooltip: { callbacks: { label: (c) => c.label + ': ' + fmt(c.parsed, 'ARS') } }
+      }
+    }
+  });
+}
+
+function renderAll() { renderTx(); renderInv(); renderAcc(); renderRec(); renderUpcoming(); renderBtc(); renderDashboard(); }
+
+function migrateInvestments() {
+  let changed = false;
+  state.investments.forEach(i => {
+    if (i.qty === undefined || i.qty === null) {
+      i.qty = 1;
+      i.avgPrice = i.invested || 0;
+      i.currentPrice = i.current || 0;
+      changed = true;
+    }
+  });
+  if (changed) persist('investments');
+}
+
+// =========== PIN PROTECTION ===========
+async function hashPin(pin) {
+  // Simple SHA-256 hash (not real encryption, just obfuscation)
+  const data = new TextEncoder().encode(pin + 'finanzas_salt_v1');
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function pinIsSet() {
+  return !!localStorage.getItem(PIN_KEY);
+}
+
+window.checkPin = async () => {
+  const input = $('pinInput').value.trim();
+  if (!input) { $('pinError').textContent = 'Ingresá tu PIN'; return; }
+  const stored = localStorage.getItem(PIN_KEY);
+  const hash = await hashPin(input);
+  if (hash === stored) {
+    $('pinScreen').style.display = 'none';
+    $('mainApp').style.display = 'block';
+    $('pinError').textContent = '';
+    $('pinInput').value = '';
+  } else {
+    $('pinError').textContent = '❌ PIN incorrecto';
+    $('pinInput').value = '';
+  }
+};
+
+window.resetPin = () => {
+  if (confirm('¿Quitar el PIN? Vas a poder volver a configurarlo desde Ajustes después.')) {
+    localStorage.removeItem(PIN_KEY);
+    location.reload();
+  }
+};
+
+// Allow Enter key to submit PIN
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && $('pinScreen').style.display === 'flex') {
+    checkPin();
+  }
+});
+
+window.setNewPin = () => {
+  const html = `
+    <div class="form-grid">
+      <p style="font-size: 13px; color: var(--text-soft);">Configurá un PIN numérico de 4-8 dígitos para proteger la app.</p>
+      <p style="font-size: 12px; color: var(--amber); background: rgba(245,158,11,0.1); padding: 8px; border-radius: 6px;">
+        ⚠️ El PIN protege contra alguien que abra la app rápido. NO es encriptación: alguien técnico podría ver los datos directamente. Igual sirve para evitar miradas casuales.
+      </p>
+      <div>
+        <label>PIN nuevo (solo números)</label>
+        <input type="password" inputmode="numeric" pattern="[0-9]*" id="newPinInput" placeholder="Mínimo 4 dígitos" maxlength="8" style="text-align: center; font-size: 20px; letter-spacing: 4px;">
+      </div>
+      <div>
+        <label>Confirmar PIN</label>
+        <input type="password" inputmode="numeric" pattern="[0-9]*" id="confirmPinInput" placeholder="Repetir PIN" maxlength="8" style="text-align: center; font-size: 20px; letter-spacing: 4px;">
+      </div>
+      <div class="modal-actions">
+        ${localStorage.getItem(PIN_KEY) ? '<button class="btn btn-danger" onclick="removePin()" style="flex:1;">Quitar PIN</button>' : ''}
+        <button class="btn btn-outline" onclick="closeModal()" style="flex:1;">Cancelar</button>
+        <button class="btn" onclick="savePin()" style="flex:1;">Guardar</button>
+      </div>
+    </div>
+  `;
+  openModal('🔒 Configurar PIN', html);
+};
+
+window.savePin = async () => {
+  const pin = $('newPinInput').value.trim();
+  const confirm = $('confirmPinInput').value.trim();
+  if (!/^\d{4,8}$/.test(pin)) { showToast('PIN debe ser 4-8 dígitos', 'error'); return; }
+  if (pin !== confirm) { showToast('Los PINs no coinciden', 'error'); return; }
+  const hash = await hashPin(pin);
+  localStorage.setItem(PIN_KEY, hash);
+  closeModal();
+  showToast('PIN guardado ✓ Activo en próxima apertura', 'success');
+};
+
+window.removePin = () => {
+  if (confirm('¿Quitar el PIN?')) {
+    localStorage.removeItem(PIN_KEY);
+    closeModal();
+    showToast('PIN quitado ✓', 'success');
+  }
+};
+
+// =========== INIT ===========
+(async () => {
+  backendUrl = localStorage.getItem(URL_KEY);
+  backendToken = localStorage.getItem(TOKEN_KEY);
+  if (!backendUrl) {
+    $('loadingOverlay').style.display = 'none';
+    $('setupScreen').style.display = 'flex';
+    return;
+  }
+  $('loadingText').textContent = 'Sincronizando con tu Sheet...';
+  await loadState();
+  migrateInvestments();
+  if (!state.meta.recurring) state.meta.recurring = [];
+  if (!state.meta.history) state.meta.history = [];
+  if (!state.meta.btc) {
+    state.meta.btc = {
+      lastData: null,
+      lastFetchedAt: null,
+      dcaPlan: [
+        { rsiBelow: 40, pctOfCapital: 33, label: 'Tramo 1' },
+        { rsiBelow: 30, pctOfCapital: 33, label: 'Tramo 2' },
+        { rsiBelow: 20, pctOfCapital: 34, label: 'Tramo 3' }
+      ],
+      tpPlan: [
+        { gainPct: 20, sellPct: 25, label: 'TP1' },
+        { gainPct: 40, sellPct: 25, label: 'TP2' },
+        { gainPct: 80, sellPct: 25, label: 'TP3' },
+        { gainPct: 150, sellPct: 25, label: 'TP4 (moon)' }
+      ]
+    };
+  }
+  if (!state.meta.exchangeSpreads) {
+    state.meta.exchangeSpreads = {
+      cocos:   { buyPct: -0.5, sellPct: 0.0,  basis: 'mep' },
+      mp:      { buyPct: -1.5, sellPct: 1.0,  basis: 'mep' },
+      brubank: { buyPct: -2.0, sellPct: 1.5,  basis: 'mep' }
+    };
+  }
+  // Try to refresh dolar rates (non-blocking on failure)
+  fetchDolarRates().catch(() => {});
+  // Try to fetch market prices (non-blocking)
+  fetchAllPrices().then(() => renderAll()).catch(() => {});
+  // Try to refresh BTC data (non-blocking, only if stale: > 30 min old)
+  const lastBtc = state.meta.btc?.lastFetchedAt;
+  const stale = !lastBtc || (Date.now() - new Date(lastBtc).getTime() > 30 * 60 * 1000);
+  if (stale) fetchBtcData().then(() => renderBtc()).catch(() => {});
+  await processRecurring();
+  await takeSnapshotIfNeeded();
+  $('loadingOverlay').style.display = 'none';
+  // Check PIN before showing app
+  if (await pinIsSet()) {
+    $('pinScreen').style.display = 'flex';
+    setTimeout(() => $('pinInput').focus(), 100);
+  } else {
+    $('mainApp').style.display = 'block';
+  }
+  renderAll();
+})();
+</script>
+
+</body>
+</html>
